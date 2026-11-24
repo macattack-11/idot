@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<style>html,body{margin:0}</style>
+<style>html,body{margin:0}[hidden]{display:none!important}</style>
 <title>iDot Control</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
 <style>
@@ -85,6 +85,25 @@ canvas#pv { width: 128px; height: 128px; image-rendering: pixelated; border: 1px
 progress { width: 100%; height: 14px; accent-color: var(--accent); }
 .check { display: flex; gap: 10px; align-items: center; font-size: 0.9rem; color: var(--muted); }
 .check input { width: 20px; height: 20px; }
+
+.grid button { aspect-ratio: 1; min-height: 0; position: relative; background-size: cover; background-position: center; image-rendering: pixelated; overflow: hidden; }
+.grid button.has { color: #fff; font-size: 0.7rem; font-weight: 700; text-shadow: 0 1px 2px #000, 0 0 3px #000; display: flex; align-items: flex-end; justify-content: flex-start; padding: 0 0 2px 4px; }
+.grid button.target { outline: 3px solid var(--bad); outline-offset: -3px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.seg button { min-height: 44px; font-size: 0.85rem; }
+.seg button.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+img#slotImg { width: 96px; height: 96px; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 6px; background: #000; display: block; margin: 0 auto 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips button { min-height: 40px; padding: 0 12px; font-size: 0.85rem; border-radius: 20px; }
+.results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.results button { padding: 0; min-height: 0; aspect-ratio: 1; overflow: hidden; background: #000; }
+.results img { width: 100%; height: 100%; object-fit: cover; display: block; }
+form.search { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+form.search input[type=search] { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-height: 48px; min-width: 0; }
+details summary { cursor: pointer; font-weight: 600; font-size: 0.9rem; min-height: 32px; }
+input[type=text].key { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-height: 48px; width: 100%; }
+.credit { font-size: 0.8rem; color: var(--muted); margin: 0; }
+a { color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { button:active { transform: none; } }
 </style>
 </head>
@@ -118,18 +137,45 @@ progress { width: 100%; height: 14px; accent-color: var(--accent); }
     <div class="scale"><span>1 dim</span><span>15 bright</span></div>
   </section>
 
-  <section aria-label="Animation">
-    <h2>Animation slot</h2>
+  <section aria-label="Animation slots">
+    <h2>Animation slots</h2>
     <p class="cur" id="cur">Slot: none chosen yet</p>
+    <img id="slotImg" alt="The GIF stored for this slot" hidden>
+    <div class="seg" role="group" aria-label="What tapping a slot does">
+      <button type="button" id="modeShow" class="on">Show on device</button>
+      <button type="button" id="modePick">Pick slot to replace</button>
+    </div>
     <div class="row" style="margin-bottom:12px">
       <button type="button" id="prev" disabled>Previous</button>
       <button type="button" id="next" disabled>Next</button>
     </div>
     <div class="grid" id="gifs"></div>
-    <p class="hint">The device has 60 animation slots, numbered 0 to 59. Tap a number, or use Previous and Next to step through them.</p>
+    <p class="hint">The device has 60 slots, numbered 0 to 59. The device cannot send its pictures back, so thumbnails appear only for GIFs sent from this page, and only in this browser.</p>
   </section>
 
-  <section aria-label="Upload a GIF">
+  <section aria-label="Find GIFs online" id="findsec">
+    <h2>Find GIFs online</h2>
+    <div class="steps">
+      <details id="gdet">
+        <summary>GIPHY key (needed once)</summary>
+        <p class="hint">Make a free account at <a href="https://developers.giphy.com/dashboard/" target="_blank" rel="noopener">developers.giphy.com</a>, press Create an API Key, choose API, then paste the key here. It stays on this device.</p>
+        <input type="text" class="key" id="gkey" placeholder="Paste your GIPHY key" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <div style="margin-top:8px"><button type="button" id="gsave" style="width:100%">Save key</button></div>
+      </details>
+      <form class="search" id="gform">
+        <input type="search" id="gq" placeholder="Search, for example zelda or race car" aria-label="Search GIFs" autocomplete="off">
+        <button class="primary" type="submit" id="gbtn">Search</button>
+      </form>
+      <label class="check"><input type="checkbox" id="gpixel" checked> Pixel art only (adds "pixel art" to your search)</label>
+      <div class="chips" id="chips" aria-label="Quick searches"></div>
+      <p class="msg" id="gmsg" role="status"></p>
+      <div class="results" id="results"></div>
+      <button type="button" id="gmore" hidden>Load more</button>
+      <p class="credit">Powered by GIPHY. Tap a result to prepare it, then send it from the box below.</p>
+    </div>
+  </section>
+
+  <section aria-label="Upload a GIF" id="upsec">
     <h2>Put your own GIF on the device</h2>
     <div class="steps">
       <label class="field" for="slot">1. Slot to replace (0 to 59)
@@ -509,19 +555,58 @@ if (typeof module !== "undefined") module.exports = IDOT;
 
   var device = null, chWrite = null, seq = 1, queue = Promise.resolve();
   var acks = {}, rx = [], uploading = false, prepared = null, previewTimer = null;
+  var mode = "show", library = {}, slotUrl = null;
   var $ = function (id) { return document.getElementById(id); };
   var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
 
   function say(text, kind) { var m = $("msg"); m.textContent = text || ""; m.className = "msg" + (kind ? " " + kind : ""); }
   function usay(text, kind) { var m = $("umsg"); m.textContent = text || ""; m.className = "msg" + (kind ? " " + kind : ""); }
+  function gsay(text, kind) { var m = $("gmsg"); m.textContent = text || ""; m.className = "msg" + (kind ? " " + kind : ""); }
 
+  // ----- remembered pictures (kept in this browser only) -----
+  var db = (function () {
+    var opening = null;
+    function open() {
+      if (!opening) opening = new Promise(function (res, rej) {
+        try {
+          var r = indexedDB.open("idot-slots", 1);
+          r.onupgradeneeded = function () { r.result.createObjectStore("slots"); };
+          r.onsuccess = function () { res(r.result); };
+          r.onerror = function () { rej(r.error); };
+        } catch (e) { rej(e); }
+      });
+      return opening;
+    }
+    return {
+      put: function (slot, val) {
+        return open().then(function (d) {
+          return new Promise(function (res, rej) {
+            var t = d.transaction("slots", "readwrite"); t.objectStore("slots").put(val, slot);
+            t.oncomplete = function () { res(); }; t.onerror = function () { rej(t.error); };
+          });
+        });
+      },
+      all: function () {
+        return open().then(function (d) {
+          return new Promise(function (res, rej) {
+            var out = {}, t = d.transaction("slots", "readonly"), c = t.objectStore("slots").openCursor();
+            c.onsuccess = function () { var cur = c.result; if (cur) { out[cur.key] = cur.value; cur.continue(); } };
+            t.oncomplete = function () { res(out); }; t.onerror = function () { rej(t.error); };
+          });
+        });
+      }
+    };
+  })();
+
+  // ----- buttons -----
   function refreshButtons() {
     var on = !!chWrite && !uploading;
     ["on", "off", "bright", "prev", "next"].forEach(function (id) { $(id).disabled = !on; });
-    Array.prototype.forEach.call(document.querySelectorAll("#gifs button"), function (b) { b.disabled = !on; });
+    gifButtons.forEach(function (b) { b.disabled = !(mode === "pick" ? !uploading : on); });
     $("send").disabled = !(chWrite && prepared && !uploading);
     var slot = parseInt($("slot").value, 10);
     $("send").textContent = "3. Send to slot " + (isNaN(slot) ? "?" : slot);
+    gifButtons.forEach(function (b, k) { b.classList.toggle("target", mode === "pick" && k === slot); });
   }
   function setConnected(on) {
     $("pill").className = "pill" + (on ? " on" : "");
@@ -635,26 +720,62 @@ if (typeof module !== "undefined") module.exports = IDOT;
   $("bright").addEventListener("input", function (e) { $("bval").textContent = e.target.value; });
   $("bright").addEventListener("change", function (e) { send(IDOT.brightBody(parseInt(e.target.value, 10)), "Brightness " + e.target.value); });
 
+  // ----- slot gallery -----
   var grid = $("gifs"), cur = -1, gifButtons = [];
+  function drawSlot(n) {
+    var b = gifButtons[n], item = library[n];
+    if (item && item.thumb) { b.style.backgroundImage = "url(" + item.thumb + ")"; b.classList.add("has"); }
+    else { b.style.backgroundImage = ""; b.classList.remove("has"); }
+  }
+  function showSlotImage(n) {
+    var img = $("slotImg");
+    if (slotUrl) { URL.revokeObjectURL(slotUrl); slotUrl = null; }
+    var item = library[n];
+    if (item && item.gif) {
+      slotUrl = URL.createObjectURL(new Blob([item.gif], { type: "image/gif" }));
+      img.src = slotUrl; img.hidden = false;
+    } else { img.hidden = true; img.removeAttribute("src"); }
+  }
   function mark(n) {
     cur = n;
-    gifButtons.forEach(function (b, k) { b.className = k === n ? "sel" : ""; });
+    gifButtons.forEach(function (b, k) { b.classList.toggle("sel", k === n); });
     $("cur").textContent = "Slot: " + n;
+    showSlotImage(n);
   }
   function pick(n) { mark(n); send(IDOT.selectBody(n), "Animation " + n); }
   for (var i = 0; i < 60; i++) {
     (function (n) {
       var b = document.createElement("button");
       b.type = "button"; b.textContent = n; b.disabled = true;
-      b.setAttribute("aria-label", "Animation " + n);
-      b.addEventListener("click", function () { pick(n); });
+      b.setAttribute("aria-label", "Slot " + n);
+      b.addEventListener("click", function () {
+        if (mode === "pick") {
+          $("slot").value = n; mark(n); refreshButtons();
+          usay("Slot " + n + " will be replaced when you press Send.");
+          $("upsec").scrollIntoView({ behavior: "smooth", block: "start" });
+        } else { pick(n); }
+      });
       grid.appendChild(b); gifButtons.push(b);
     })(i);
   }
   $("prev").addEventListener("click", function () { pick(cur <= 0 ? 59 : cur - 1); });
   $("next").addEventListener("click", function () { pick(cur >= 59 ? 0 : cur + 1); });
+  function setMode(m) {
+    mode = m;
+    $("modeShow").className = m === "show" ? "on" : "";
+    $("modePick").className = m === "pick" ? "on" : "";
+    refreshButtons();
+  }
+  $("modeShow").addEventListener("click", function () { setMode("show"); });
+  $("modePick").addEventListener("click", function () { setMode("pick"); });
+  try {
+    db.all().then(function (all) {
+      library = all;
+      Object.keys(all).forEach(function (k) { var n = parseInt(k, 10); if (n >= 0 && n < 60) drawSlot(n); });
+    }).catch(function () {});
+  } catch (e) {}
 
-  // ----- GIF upload -----
+  // ----- preparing a picture for the device -----
   function stopPreview() { if (previewTimer) { clearTimeout(previewTimer); previewTimer = null; } }
   function playPreview(p) {
     stopPreview();
@@ -672,27 +793,34 @@ if (typeof module !== "undefined") module.exports = IDOT;
       previewTimer = setTimeout(step, wait);
     })();
   }
-  async function decodeAnyImage(file, bytes) {
+  function thumbOf(p) {
+    var c = document.createElement("canvas"); c.width = p.width; c.height = p.height;
+    var ctx = c.getContext("2d"), img = ctx.createImageData(p.width, p.height), idx = p.indexFrames[0];
+    for (var k = 0; k < idx.length; k++) {
+      var col = p.palette[idx[k]];
+      img.data[k * 4] = col[0]; img.data[k * 4 + 1] = col[1]; img.data[k * 4 + 2] = col[2]; img.data[k * 4 + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    return c.toDataURL("image/png");
+  }
+  async function decodeAnyImage(blobOrFile, bytes) {
     var isGif = bytes.length > 6 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46;
     if (isGif) return IDOT.decodeGif(bytes);
-    var bmp = await createImageBitmap(file);
+    var bmp = await createImageBitmap(blobOrFile);
     var c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height;
     var cx = c.getContext("2d"); cx.drawImage(bmp, 0, 0);
     var data = cx.getImageData(0, 0, bmp.width, bmp.height).data;
     return { width: bmp.width, height: bmp.height, frames: [{ rgba: new Uint8ClampedArray(data), delay: 1000 }], still: true };
   }
-  $("file").addEventListener("change", async function (e) {
-    var file = e.target.files && e.target.files[0];
+  async function prepareFromBytes(blob, bytes, label) {
     prepared = null; stopPreview(); $("previewBox").hidden = true; refreshButtons();
-    if (!file) return;
-    if (file.size > 15 * 1024 * 1024) { usay("That file is over 15 MB. Please pick a smaller GIF.", "bad"); return; }
     usay("Preparing the picture...");
     try {
       await sleep(30);
-      var bytes = new Uint8Array(await file.arrayBuffer());
-      var dec = await decodeAnyImage(file, bytes);
+      var dec = await decodeAnyImage(blob, bytes);
       await sleep(30);
       prepared = IDOT.makeGif(dec, MAX_GIF_BYTES);
+      prepared.label = label || "";
       $("previewBox").hidden = false;
       $("info").textContent = prepared.width + " by " + prepared.height + " pixels, " + prepared.frames + " frame" + (prepared.frames === 1 ? "" : "s") +
         ", " + Math.round(prepared.bytes.length / 1024) + " KB, " + (prepared.ms / 1000).toFixed(1) + " seconds long." +
@@ -704,9 +832,17 @@ if (typeof module !== "undefined") module.exports = IDOT;
       usay("Could not read that file: " + (err && err.message ? err.message : err), "bad");
     }
     refreshButtons();
+  }
+  $("file").addEventListener("change", async function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) { prepared = null; stopPreview(); $("previewBox").hidden = true; refreshButtons(); return; }
+    if (file.size > 15 * 1024 * 1024) { usay("That file is over 15 MB. Please pick a smaller GIF.", "bad"); return; }
+    var bytes = new Uint8Array(await file.arrayBuffer());
+    await prepareFromBytes(file, bytes, file.name);
   });
   $("slot").addEventListener("input", refreshButtons);
 
+  // ----- sending to the device -----
   $("send").addEventListener("click", async function () {
     var slot = parseInt($("slot").value, 10);
     if (isNaN(slot) || slot < 0 || slot > 59) { usay("Slot must be a number from 0 to 59.", "bad"); return; }
@@ -731,6 +867,9 @@ if (typeof module !== "undefined") module.exports = IDOT;
       await writeRaw(IDOT.frame(sel, IDOT.selectBody(slot)));
       await waitAck(sel, 6000);
       prog.value = prog.max;
+      library[slot] = { thumb: thumbOf(prepared), gif: prepared.bytes, name: prepared.label || "", when: Date.now() };
+      drawSlot(slot);
+      try { await db.put(slot, library[slot]); } catch (e) {}
       mark(slot);
       usay("Done. Slot " + slot + " now holds your GIF and is showing.", "good");
     } catch (err) {
@@ -738,6 +877,82 @@ if (typeof module !== "undefined") module.exports = IDOT;
     }
     uploading = false; refreshButtons();
   });
+
+  // ----- finding GIFs online (GIPHY) -----
+  var GKEY = "idot-giphy-key", gOffset = 0, gQuery = "", gBusy = false, PAGE = 24;
+  var CHIPS = ["Video games", "Mario", "Zelda", "Pokemon", "Sonic", "Minecraft", "Football", "Basketball", "Cars", "Anime", "Animals", "Space", "Retro"];
+  function savedKey() { try { return localStorage.getItem(GKEY) || ""; } catch (e) { return ""; } }
+  $("gkey").value = savedKey();
+  $("gdet").open = !savedKey();
+  $("gsave").addEventListener("click", function () {
+    var k = $("gkey").value.trim();
+    try { localStorage.setItem(GKEY, k); } catch (e) {}
+    gsay(k ? "Key saved on this device." : "Key cleared.", k ? "good" : "");
+    if (k) $("gdet").open = false;
+  });
+  CHIPS.forEach(function (c) {
+    var b = document.createElement("button");
+    b.type = "button"; b.textContent = c;
+    b.addEventListener("click", function () { $("gq").value = c; search(true); });
+    $("chips").appendChild(b);
+  });
+  $("gform").addEventListener("submit", function (e) { e.preventDefault(); search(true); });
+  $("gmore").addEventListener("click", function () { search(false); });
+
+  async function search(fresh) {
+    if (gBusy) return;
+    var key = ($("gkey").value || savedKey()).trim();
+    if (!key) { $("gdet").open = true; gsay("Paste your GIPHY key first.", "bad"); return; }
+    var typed = $("gq").value.trim();
+    if (fresh) {
+      if (!typed) { gsay("Type something to search for, or tap one of the quick searches.", "bad"); return; }
+      gQuery = typed + ($("gpixel").checked ? " pixel art" : ""); gOffset = 0; $("results").textContent = "";
+    }
+    gBusy = true; $("gmore").hidden = true; gsay("Searching...");
+    try {
+      var url = "https://api.giphy.com/v1/gifs/search?api_key=" + encodeURIComponent(key) + "&q=" + encodeURIComponent(gQuery) +
+        "&limit=" + PAGE + "&offset=" + gOffset + "&rating=pg&lang=en";
+      var r = await fetch(url);
+      if (!r.ok) {
+        throw new Error(r.status === 401 || r.status === 403 ? "GIPHY did not accept that key. Check it and save it again."
+          : r.status === 429 ? "GIPHY says too many searches this hour (free keys allow 100). Try again later."
+          : "GIPHY answered with error " + r.status + ".");
+      }
+      var j = await r.json(), list = j.data || [];
+      list.forEach(function (d) {
+        var im = d.images || {}, thumb = (im.fixed_width_small || im.fixed_width || im.original || {}).url,
+          full = (im.fixed_width || im.original || {}).url;
+        if (!thumb || !full) return;
+        var b = document.createElement("button");
+        b.type = "button"; b.setAttribute("aria-label", d.title || "GIF");
+        var img = document.createElement("img");
+        img.src = thumb; img.alt = d.title || ""; img.loading = "lazy";
+        b.appendChild(img);
+        b.addEventListener("click", function () { useOnline(full, d.title || "GIPHY GIF"); });
+        $("results").appendChild(b);
+      });
+      gOffset += list.length;
+      gsay(list.length ? "Tap a picture to prepare it." : (gOffset ? "No more results." : "Nothing found. Try another word, or untick Pixel art only."), list.length ? "" : "bad");
+      $("gmore").hidden = list.length < PAGE;
+    } catch (err) {
+      gsay(err && err.message && /GIPHY/.test(err.message) ? err.message : "Could not reach GIPHY. Check your connection and the key.", "bad");
+    }
+    gBusy = false;
+  }
+  async function useOnline(url, title) {
+    gsay("Downloading...");
+    try {
+      var r = await fetch(url);
+      if (!r.ok) throw new Error("download failed");
+      var bytes = new Uint8Array(await r.arrayBuffer());
+      gsay("Got it. Preparing...", "good");
+      await prepareFromBytes(new Blob([bytes]), bytes, "GIPHY: " + title);
+      gsay("");
+      $("upsec").scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      gsay("Could not download that GIF here. Try a different one.", "bad");
+    }
+  }
 
   setConnected(false);
   if (!navigator.bluetooth) say("This browser has no Bluetooth access. On iPhone, open this page in the Bluefy app.", "bad");
