@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>html,body{margin:0}</style>
 <title>iDot Control</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
 <style>
 /* Layout: one narrow column of big touch controls, built for a phone held in one hand. */
@@ -66,16 +65,28 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .value { font-family: var(--font-display); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
 input[type=range] { width: 100%; height: 40px; accent-color: var(--accent); }
 .scale { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.8rem; }
-.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.grid button { min-height: 52px; font-variant-numeric: tabular-nums; }
-.grid button.known { border-color: var(--accent); }
+.grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.grid button { min-height: 44px; padding: 0; font-variant-numeric: tabular-nums; }
+.grid button.sel { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.cur { text-align: center; margin: 0 0 12px; font-family: var(--font-display); font-size: 1.1rem; }
 .hint { color: var(--muted); font-size: 0.85rem; margin: 12px 0 0; }
-.msg { font-size: 0.9rem; min-height: 1.4em; margin: 0; }
+.msg { font-size: 0.9rem; min-height: 1.4em; margin: 0; overflow-wrap: anywhere; }
 .msg.bad { color: var(--bad); }
 .msg.good { color: var(--good); }
+label.field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 0.9rem; }
+input[type=number], input[type=file] {
+  font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 12px; min-height: 48px; width: 100%;
+}
+.steps { display: flex; flex-direction: column; gap: 14px; }
+.preview { display: flex; gap: 14px; align-items: center; }
+canvas#pv { width: 128px; height: 128px; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 6px; background: #000; flex: none; }
+.info { font-size: 0.9rem; color: var(--muted); margin: 0; }
+progress { width: 100%; height: 14px; accent-color: var(--accent); }
+.check { display: flex; gap: 10px; align-items: center; font-size: 0.9rem; color: var(--muted); }
+.check input { width: 20px; height: 20px; }
 @media (prefers-reduced-motion: reduce) { button:active { transform: none; } }
 </style>
-
 </head>
 <body>
 <main>
@@ -108,67 +119,468 @@ input[type=range] { width: 100%; height: 40px; accent-color: var(--accent); }
   </section>
 
   <section aria-label="Animation">
-    <h2>Animation number</h2>
+    <h2>Animation slot</h2>
+    <p class="cur" id="cur">Slot: none chosen yet</p>
+    <div class="row" style="margin-bottom:12px">
+      <button type="button" id="prev" disabled>Previous</button>
+      <button type="button" id="next" disabled>Next</button>
+    </div>
     <div class="grid" id="gifs"></div>
-    <p class="hint">Outlined numbers (0, 1, 6) were seen in the Loyplay app recording. The others are untested, so tap them and see what the device shows.</p>
+    <p class="hint">The device has 60 animation slots, numbered 0 to 59. Tap a number, or use Previous and Next to step through them.</p>
+  </section>
+
+  <section aria-label="Upload a GIF">
+    <h2>Put your own GIF on the device</h2>
+    <div class="steps">
+      <label class="field" for="slot">1. Slot to replace (0 to 59)
+        <input type="number" id="slot" min="0" max="59" step="1" value="49" inputmode="numeric">
+      </label>
+      <label class="field" for="file">2. Choose a GIF
+        <input type="file" id="file" accept="image/gif,image/*">
+      </label>
+      <div class="preview" id="previewBox" hidden>
+        <canvas id="pv" width="64" height="64" aria-label="Preview of the GIF that will be sent"></canvas>
+        <p class="info" id="info"></p>
+      </div>
+      <div>
+        <button class="primary" type="button" id="send" style="width:100%" disabled>3. Send to the device</button>
+      </div>
+      <progress id="prog" value="0" max="1" hidden></progress>
+      <p class="msg" id="umsg" role="status"></p>
+      <label class="check"><input type="checkbox" id="slow"> Slow and safe mode (try this if uploads fail)</label>
+    </div>
+    <p class="hint">The picture is shrunk to fit the 64 by 64 screen. Sending replaces what is in that slot. Only slot 49 has been tested so far. On iPhone, pick the GIF with "Choose File" from the Files app, because the Photos picker can flatten GIFs into still pictures.</p>
   </section>
 </main>
 
+<script>
+/* iDot core: message building, GIF reading, resizing and writing. No outside libraries. */
+var IDOT = (function () {
+  "use strict";
+
+  // ---------- messages the device understands ----------
+  var HEADER = [0xaa, 0x55, 0xff, 0xff];
+  var HELLO = [0xc1, 0x03, 0x0a, 0x00, 0x1b, 0x00, 0x04, 0x00, 0x06, 0x00];
+  var CHUNK_SIZE = 960;
+  var BLOBS = {
+    a: [0x6f, 0x7c, 0x09, 0x7f, 0xaf, 0x64, 0x84, 0xf8, 0x59, 0xd3, 0x43, 0x4e, 0x64, 0x23, 0xe4, 0xe4, 0xd8, 0x06, 0x06, 0x6b],
+    b: [0xd2, 0x76, 0x4f, 0x4a, 0xc9, 0x36, 0xc0, 0x8c, 0x8c, 0xa2, 0x6b, 0x4a, 0x47, 0x27, 0x73, 0xfe, 0x3c, 0x07, 0x06, 0x6b]
+  };
+
+  function frame(seq, body) {
+    var len = 2 + body.length + 2;
+    var out = new Uint8Array(8 + body.length + 2);
+    out.set(HEADER, 0);
+    out[4] = len & 255; out[5] = len >> 8; out[6] = seq & 255; out[7] = (seq >> 8) & 255;
+    out.set(body, 8);
+    var sum = 0;
+    for (var i = 0; i < out.length - 2; i++) sum += out[i];
+    sum &= 0xffff;
+    out[out.length - 2] = sum & 255; out[out.length - 1] = sum >> 8;
+    return out;
+  }
+  function powerBody(on) { return [0xc1, 0x02, 0x04, 0x02, 0x00, on ? 1 : 0]; }
+  function brightBody(v) { return [0xc1, 0x02, 0x06, 0x02, 0x00, v]; }
+  function selectBody(slot) {
+    var b = [0xc1, 0x02, 0x36, 0x3e, 0x01, slot, 0x00];
+    for (var k = 1; k < 0x3c; k++) b.push(k);
+    return b;
+  }
+  function startBody(slot, seconds, w, h) {
+    return [0xc1, 0x02, 0x08, 0x02, 0x00, slot, 0x09, 0x01, 0x01, 0x0c, 0x01, slot,
+      0x1c, 0x06, 0x00, 0x00, 0x01, 0x00, seconds, 0x00, 0x0d, 0x01, 0x00,
+      0x1d, 0x09, 0x00, 0x00, 0x00, 0x00, w, 0x00, h, 0x00, 0x00];
+  }
+  function prefix(slot) { return [0xc1, 0x02, 0x09, 0x01, 0x01, 0x0c, 0x01, slot, 0x0d, 0x01, 0x00, 0x0e, 0x01, 0x00]; }
+  function prepareBody(slot) { return prefix(slot).concat([0x14, 0x03, 0x01, 0x0d, 0x03, 0x11, 0x04, 0x00, 0x01, 0x00, 0x0a]); }
+  function chunkBody(slot, total, index, data) {
+    var head = prefix(slot).concat([0x12, 0x07, total & 255, total >> 8, index & 255, index >> 8,
+      CHUNK_SIZE & 255, CHUNK_SIZE >> 8, 0x00, 0x13, 0x82, data.length & 255, data.length >> 8]);
+    var out = new Uint8Array(head.length + data.length);
+    out.set(head, 0); out.set(data, head.length);
+    return out;
+  }
+  function commitBody(slot, blob) { return [0xc1, 0x02, 0x35, 0x19, slot, 0x50, 0x00, 0x00, 0x00].concat(blob); }
+
+  // The messages for one upload, in order. Each must be answered with OK before the next is sent.
+  function uploadBodies(gif, slot, seconds, blob) {
+    var out = [];
+    out.push({ label: "start", body: startBody(slot, seconds, 64, 64) });
+    out.push({ label: "prepare", body: prepareBody(slot) });
+    var total = Math.ceil(gif.length / CHUNK_SIZE);
+    for (var i = 0; i < total; i++) {
+      out.push({ label: "chunk", index: i, total: total, body: chunkBody(slot, total, i, gif.subarray(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE)) });
+    }
+    out.push({ label: "finish", body: commitBody(slot, blob || BLOBS.a) });
+    return out;
+  }
+
+  // ---------- GIF reader ----------
+  function lzwDecode(minCode, data, npix) {
+    var clear = 1 << minCode, eoi = clear + 1;
+    var size = minCode + 1, next = eoi + 1;
+    var prefixT = new Uint16Array(4096), suffixT = new Uint8Array(4096), stack = new Uint8Array(4097);
+    var out = new Uint8Array(npix);
+    var op = 0, bits = 0, acc = 0, ip = 0, prev = -1, first = 0, i;
+    for (i = 0; i < clear; i++) { suffixT[i] = i; }
+    while (op < npix) {
+      while (bits < size) {
+        if (ip >= data.length) return out;
+        acc |= data[ip++] << bits; bits += 8;
+      }
+      var code = acc & ((1 << size) - 1);
+      acc >>= size; bits -= size;
+      if (code === clear) { size = minCode + 1; next = eoi + 1; prev = -1; continue; }
+      if (code === eoi) break;
+      if (prev === -1) { out[op++] = suffixT[code]; prev = code; first = suffixT[code]; continue; }
+      var cur = code, sp = 0;
+      if (code >= next) { stack[sp++] = first; cur = prev; }
+      while (cur >= clear) { stack[sp++] = suffixT[cur]; cur = prefixT[cur]; }
+      first = cur;
+      stack[sp++] = cur;
+      if (next < 4096) {
+        prefixT[next] = prev; suffixT[next] = first; next++;
+        if (next === (1 << size) && size < 12) size++;
+      }
+      while (sp > 0 && op < npix) out[op++] = stack[--sp];
+      prev = code;
+    }
+    return out;
+  }
+
+  // Returns { width, height, frames: [{ rgba (full picture), delay (ms) }] }
+  function decodeGif(buf) {
+    var sig = String.fromCharCode(buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
+    if (sig !== "GIF87a" && sig !== "GIF89a") throw new Error("That file is not a GIF.");
+    var W = buf[6] | (buf[7] << 8), H = buf[8] | (buf[9] << 8), flags = buf[10];
+    var p = 13, gct = null;
+    if (flags & 0x80) { var n = 2 << (flags & 7); gct = buf.subarray(p, p + 3 * n); p += 3 * n; }
+    var canvas = new Uint8ClampedArray(W * H * 4);
+    var frames = [], gce = null;
+    function skipSub() { var s = buf[p]; while (s) { p += s + 1; s = buf[p]; } p++; }
+    while (p < buf.length) {
+      var b = buf[p++];
+      if (b === 0x3b) break;
+      if (b === 0x21) {
+        var label = buf[p++];
+        if (label === 0xf9) {
+          var f = buf[p + 1];
+          gce = { disposal: (f >> 2) & 7, transparent: (f & 1) ? buf[p + 4] : -1, delay: (buf[p + 2] | (buf[p + 3] << 8)) * 10 };
+        }
+        skipSub();
+      } else if (b === 0x2c) {
+        var left = buf[p] | (buf[p + 1] << 8), top = buf[p + 2] | (buf[p + 3] << 8);
+        var w = buf[p + 4] | (buf[p + 5] << 8), h = buf[p + 6] | (buf[p + 7] << 8), lf = buf[p + 8];
+        p += 9;
+        var table = gct;
+        if (lf & 0x80) { var ln = 2 << (lf & 7); table = buf.subarray(p, p + 3 * ln); p += 3 * ln; }
+        var minCode = buf[p++];
+        var parts = [], total = 0, s = buf[p];
+        while (s) { parts.push(buf.subarray(p + 1, p + 1 + s)); total += s; p += s + 1; s = buf[p]; }
+        p++;
+        var data = new Uint8Array(total), o = 0;
+        for (var q = 0; q < parts.length; q++) { data.set(parts[q], o); o += parts[q].length; }
+        var idx = lzwDecode(minCode, data, w * h);
+        var rows = new Array(h), r;
+        if (lf & 0x40) {
+          var order = [], starts = [0, 4, 2, 1], steps = [8, 8, 4, 2];
+          for (var ps = 0; ps < 4; ps++) for (r = starts[ps]; r < h; r += steps[ps]) order.push(r);
+          for (r = 0; r < h; r++) rows[order[r]] = r;
+        } else { for (r = 0; r < h; r++) rows[r] = r; }
+        var g = gce || { disposal: 0, transparent: -1, delay: 100 };
+        var saved = g.disposal === 3 ? canvas.slice() : null;
+        for (var y = 0; y < h; y++) {
+          var cy = top + y; if (cy >= H) continue;
+          var srcRow = rows[y] * w;
+          for (var x = 0; x < w; x++) {
+            var cx = left + x; if (cx >= W) continue;
+            var ci = idx[srcRow + x];
+            if (ci === g.transparent || !table) continue;
+            var di = (cy * W + cx) * 4;
+            canvas[di] = table[ci * 3]; canvas[di + 1] = table[ci * 3 + 1]; canvas[di + 2] = table[ci * 3 + 2]; canvas[di + 3] = 255;
+          }
+        }
+        frames.push({ rgba: canvas.slice(), delay: g.delay || 100 });
+        if (g.disposal === 2) {
+          for (var yy = 0; yy < h; yy++) for (var xx = 0; xx < w; xx++) {
+            var ty = top + yy, tx = left + xx;
+            if (ty < H && tx < W) { var k = (ty * W + tx) * 4; canvas[k] = canvas[k + 1] = canvas[k + 2] = canvas[k + 3] = 0; }
+          }
+        } else if (g.disposal === 3 && saved) { canvas.set(saved); }
+        gce = null;
+      }
+    }
+    if (!frames.length) throw new Error("No pictures found in that GIF.");
+    return { width: W, height: H, frames: frames };
+  }
+
+  // ---------- resizing, colours, GIF writer ----------
+  function toRgb(rgba) {
+    var n = rgba.length / 4, out = new Uint8ClampedArray(n * 3);
+    for (var i = 0; i < n; i++) {
+      var a = rgba[i * 4 + 3] / 255;
+      out[i * 3] = Math.round(rgba[i * 4] * a); out[i * 3 + 1] = Math.round(rgba[i * 4 + 1] * a); out[i * 3 + 2] = Math.round(rgba[i * 4 + 2] * a);
+    }
+    return out;
+  }
+
+  // Average the source pixels that fall under each new pixel.
+  function resizeArea(src, sw, sh, dw, dh) {
+    var out = new Uint8ClampedArray(dw * dh * 3);
+    var xs = sw / dw, ys = sh / dh;
+    for (var dy = 0; dy < dh; dy++) {
+      var y0 = dy * ys, y1 = (dy + 1) * ys;
+      for (var dx = 0; dx < dw; dx++) {
+        var x0 = dx * xs, x1 = (dx + 1) * xs;
+        var r = 0, g = 0, b = 0, wsum = 0;
+        for (var sy = Math.floor(y0); sy < Math.ceil(y1) && sy < sh; sy++) {
+          var wy = Math.min(sy + 1, y1) - Math.max(sy, y0);
+          for (var sx = Math.floor(x0); sx < Math.ceil(x1) && sx < sw; sx++) {
+            var wgt = wy * (Math.min(sx + 1, x1) - Math.max(sx, x0));
+            var i = (sy * sw + sx) * 3;
+            r += src[i] * wgt; g += src[i + 1] * wgt; b += src[i + 2] * wgt; wsum += wgt;
+          }
+        }
+        var o = (dy * dw + dx) * 3;
+        out[o] = r / wsum; out[o + 1] = g / wsum; out[o + 2] = b / wsum;
+      }
+    }
+    return out;
+  }
+
+  function key15(r, g, b) { return ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3); }
+
+  // One shared palette for every frame (median cut on 5-bit colours).
+  function buildPalette(rgbFrames, maxColors) {
+    var hist = new Uint32Array(32768), f, i;
+    for (f = 0; f < rgbFrames.length; f++) {
+      var px = rgbFrames[f];
+      for (i = 0; i < px.length; i += 3) hist[key15(px[i], px[i + 1], px[i + 2])]++;
+    }
+    var keys = [];
+    for (i = 0; i < 32768; i++) if (hist[i]) keys.push(i);
+    function chan(k, c) { return c === 0 ? (k >> 10) & 31 : c === 1 ? (k >> 5) & 31 : k & 31; }
+    function expand(v) { return (v << 3) | (v >> 2); }
+    var boxes = [keys];
+    while (boxes.length < maxColors) {
+      var best = -1, bestScore = 0, bc = 0, bi;
+      for (bi = 0; bi < boxes.length; bi++) {
+        var bx = boxes[bi]; if (bx.length < 2) continue;
+        for (var c = 0; c < 3; c++) {
+          var mn = 31, mx = 0, pop = 0;
+          for (var j = 0; j < bx.length; j++) { var v = chan(bx[j], c); if (v < mn) mn = v; if (v > mx) mx = v; pop += hist[bx[j]]; }
+          var score = (mx - mn) * Math.sqrt(pop);
+          if (score > bestScore) { bestScore = score; best = bi; bc = c; }
+        }
+      }
+      if (best < 0) break;
+      var box = boxes[best];
+      box.sort(function (a, b) { return chan(a, bc) - chan(b, bc); });
+      var tot = 0, k; for (k = 0; k < box.length; k++) tot += hist[box[k]];
+      var half = tot / 2, run = 0, cut = 1;
+      for (k = 0; k < box.length; k++) { run += hist[box[k]]; if (run >= half) { cut = Math.min(Math.max(k + 1, 1), box.length - 1); break; } }
+      boxes.splice(best, 1, box.slice(0, cut), box.slice(cut));
+    }
+    var palette = [];
+    for (bi = 0; bi < boxes.length; bi++) {
+      var bb = boxes[bi], rs = 0, gs = 0, bs = 0, ws = 0;
+      for (var m = 0; m < bb.length; m++) {
+        var w2 = hist[bb[m]]; rs += chan(bb[m], 0) * w2; gs += chan(bb[m], 1) * w2; bs += chan(bb[m], 2) * w2; ws += w2;
+      }
+      palette.push([expand(Math.round(rs / ws)), expand(Math.round(gs / ws)), expand(Math.round(bs / ws))]);
+    }
+    return palette;
+  }
+
+  function mapToPalette(rgbFrames, palette) {
+    var cache = new Int16Array(32768).fill(-1);
+    return rgbFrames.map(function (px) {
+      var out = new Uint8Array(px.length / 3);
+      for (var i = 0, o = 0; i < px.length; i += 3, o++) {
+        var k = key15(px[i], px[i + 1], px[i + 2]), c = cache[k];
+        if (c < 0) {
+          var bd = 1e9; c = 0;
+          for (var p = 0; p < palette.length; p++) {
+            var dr = palette[p][0] - px[i], dg = palette[p][1] - px[i + 1], db = palette[p][2] - px[i + 2];
+            var d = dr * dr + dg * dg + db * db;
+            if (d < bd) { bd = d; c = p; }
+          }
+          cache[k] = c;
+        }
+        out[o] = c;
+      }
+      return out;
+    });
+  }
+
+  function lzwEncode(indices, minCode) {
+    var clear = 1 << minCode, eoi = clear + 1;
+    var size = minCode + 1, next = eoi + 1;
+    var dict = new Map(), out = [], acc = 0, bits = 0;
+    function emit(code) {
+      acc |= code << bits; bits += size;
+      while (bits >= 8) { out.push(acc & 255); acc >>= 8; bits -= 8; }
+    }
+    emit(clear);
+    var cur = indices[0];
+    for (var i = 1; i < indices.length; i++) {
+      var k = indices[i], key = cur * 256 + k, hit = dict.get(key);
+      if (hit !== undefined) { cur = hit; continue; }
+      emit(cur);
+      if (next === 4096) {
+        emit(clear); next = eoi + 1; size = minCode + 1; dict = new Map();
+      } else {
+        if (next >= (1 << size)) size++;
+        dict.set(key, next++);
+      }
+      cur = k;
+    }
+    emit(cur); emit(eoi);
+    if (bits > 0) out.push(acc & 255);
+    return out;
+  }
+
+  function encodeGif(w, h, palette, indexFrames, delaysMs) {
+    var nbits = 1;
+    while ((1 << nbits) < palette.length) nbits++;
+    var minCode = Math.max(2, nbits), tableSize = 1 << nbits;
+    var out = [];
+    function put(arr) { for (var i = 0; i < arr.length; i++) out.push(arr[i]); }
+    put([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, w & 255, w >> 8, h & 255, h >> 8, 0x80 | ((nbits - 1) << 4) | (nbits - 1), 0, 0]);
+    for (var i = 0; i < tableSize; i++) put(palette[i] || [0, 0, 0]);
+    put([0x21, 0xff, 0x0b, 0x4e, 0x45, 0x54, 0x53, 0x43, 0x41, 0x50, 0x45, 0x32, 0x2e, 0x30, 0x03, 0x01, 0x00, 0x00, 0x00]);
+    for (var f = 0; f < indexFrames.length; f++) {
+      var cs = Math.max(2, Math.round(delaysMs[f] / 10));
+      put([0x21, 0xf9, 0x04, 0x04, cs & 255, cs >> 8, 0x00, 0x00]);
+      put([0x2c, 0, 0, 0, 0, w & 255, w >> 8, h & 255, h >> 8, 0x00, minCode]);
+      var codes = lzwEncode(indexFrames[f], minCode);
+      for (var s = 0; s < codes.length; s += 255) {
+        var part = codes.slice(s, s + 255);
+        out.push(part.length); put(part);
+      }
+      out.push(0);
+    }
+    out.push(0x3b);
+    return new Uint8Array(out);
+  }
+
+  // Whole pipeline: decoded GIF in, device-ready GIF out (fits 64x64, small enough to upload).
+  function makeGif(dec, maxBytes, log) {
+    var scale = Math.min(64 / dec.width, 64 / dec.height);
+    var w = Math.max(1, Math.round(dec.width * scale)), h = Math.max(1, Math.round(dec.height * scale));
+    var rgb = dec.frames.map(function (f) { return resizeArea(toRgb(f.rgba), dec.width, dec.height, w, h); });
+    var delays = dec.frames.map(function (f) { return Math.max(20, f.delay || 100); });
+    var tries = [256, 128, 64, 32], result = null, palette, idx;
+    for (var t = 0; t < tries.length; t++) {
+      palette = buildPalette(rgb, tries[t]);
+      idx = mapToPalette(rgb, palette);
+      result = encodeGif(w, h, palette, idx, delays);
+      if (result.length <= maxBytes) break;
+      if (log) log("Too big (" + result.length + " bytes) with " + tries[t] + " colours, trying fewer...");
+    }
+    while (result.length > maxBytes && rgb.length > 2) {
+      var nr = [], nd = [];
+      for (var i = 0; i < rgb.length; i += 2) { nr.push(rgb[i]); nd.push(delays[i] + (i + 1 < delays.length ? delays[i + 1] : 0)); }
+      rgb = nr; delays = nd;
+      palette = buildPalette(rgb, 32); idx = mapToPalette(rgb, palette);
+      result = encodeGif(w, h, palette, idx, delays);
+      if (log) log("Still too big, using fewer frames: " + rgb.length);
+    }
+    var ms = delays.reduce(function (a, b) { return a + b; }, 0);
+    return { bytes: result, width: w, height: h, ms: ms, frames: rgb.length, palette: palette, indexFrames: idx, delays: delays };
+  }
+
+  return {
+    frame: frame, HELLO: HELLO, BLOBS: BLOBS, CHUNK_SIZE: CHUNK_SIZE,
+    powerBody: powerBody, brightBody: brightBody, selectBody: selectBody,
+    uploadBodies: uploadBodies, decodeGif: decodeGif, makeGif: makeGif,
+    resizeArea: resizeArea, toRgb: toRgb, encodeGif: encodeGif, buildPalette: buildPalette, mapToPalette: mapToPalette
+  };
+})();
+if (typeof module !== "undefined") module.exports = IDOT;
+
+</script>
 <script>
 (function () {
   var SERVICE = "0000fff0-0000-1000-8000-00805f9b34fb";
   var WRITE = "0000fff2-0000-1000-8000-00805f9b34fb";
   var NOTIFY = "0000fff1-0000-1000-8000-00805f9b34fb";
-  var HELLO = [0xc1, 0x03, 0x0a, 0x00, 0x1b, 0x00, 0x04, 0x00, 0x06, 0x00];
+  var MAX_GIF_BYTES = 105000;
 
   var device = null, chWrite = null, seq = 1, queue = Promise.resolve();
+  var acks = {}, rx = [], uploading = false, prepared = null, previewTimer = null;
   var $ = function (id) { return document.getElementById(id); };
-
-  function frame(n, body) {
-    var len = 2 + body.length + 2;
-    var arr = [0xaa, 0x55, 0xff, 0xff, len & 255, len >> 8, n & 255, (n >> 8) & 255].concat(body);
-    var sum = arr.reduce(function (a, b) { return a + b; }, 0) & 0xffff;
-    arr.push(sum & 255, sum >> 8);
-    return new Uint8Array(arr);
-  }
-  function powerBody(on) { return [0xc1, 0x02, 0x04, 0x02, 0x00, on ? 1 : 0]; }
-  function brightBody(v) { return [0xc1, 0x02, 0x06, 0x02, 0x00, v]; }
-  function gifBody(i) {
-    var b = [0xc1, 0x02, 0x36, 0x3e, 0x01, i, 0x00];
-    for (var k = 1; k < 0x3c; k++) b.push(k);
-    return b;
-  }
+  var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
 
   function say(text, kind) { var m = $("msg"); m.textContent = text || ""; m.className = "msg" + (kind ? " " + kind : ""); }
+  function usay(text, kind) { var m = $("umsg"); m.textContent = text || ""; m.className = "msg" + (kind ? " " + kind : ""); }
+
+  function refreshButtons() {
+    var on = !!chWrite && !uploading;
+    ["on", "off", "bright", "prev", "next"].forEach(function (id) { $(id).disabled = !on; });
+    Array.prototype.forEach.call(document.querySelectorAll("#gifs button"), function (b) { b.disabled = !on; });
+    $("send").disabled = !(chWrite && prepared && !uploading);
+    var slot = parseInt($("slot").value, 10);
+    $("send").textContent = "3. Send to slot " + (isNaN(slot) ? "?" : slot);
+  }
   function setConnected(on) {
     $("pill").className = "pill" + (on ? " on" : "");
     $("state").textContent = on ? "Connected" : "Not connected";
     $("connect").textContent = on ? "Disconnect" : "Connect";
-    ["on", "off", "bright"].forEach(function (id) { $(id).disabled = !on; });
-    Array.prototype.forEach.call(document.querySelectorAll("#gifs button"), function (b) { b.disabled = !on; });
+    refreshButtons();
   }
 
+  // ----- talking to the device -----
+  function pieceSize() { return $("slow").checked ? { n: 20, gap: 15 } : { n: 100, gap: 5 }; }
+  async function writeRaw(bytes) {
+    var ps = pieceSize();
+    for (var off = 0; off < bytes.length; off += ps.n) {
+      await chWrite.writeValueWithoutResponse(bytes.slice(off, off + ps.n));
+      if (ps.gap) await sleep(ps.gap);
+    }
+  }
+  function waitAck(n, ms) {
+    return new Promise(function (resolve, reject) {
+      var t0 = Date.now();
+      (function poll() {
+        if (acks[n] !== undefined) { return acks[n] === 0 ? resolve() : reject(new Error("the device refused it (code " + acks[n] + ")")); }
+        if (Date.now() - t0 > ms) return reject(new Error("no answer from the device"));
+        setTimeout(poll, 20);
+      })();
+    });
+  }
+  function onReply(ev) {
+    var dv = ev.target.value;
+    for (var i = 0; i < dv.byteLength; i++) rx.push(dv.getUint8(i));
+    for (;;) {
+      var s = -1;
+      for (var k = 0; k + 3 < rx.length; k++) if (rx[k] === 0xaa && rx[k + 1] === 0x55 && rx[k + 2] === 0xff && rx[k + 3] === 0xff) { s = k; break; }
+      if (s < 0) { if (rx.length > 3) rx = rx.slice(rx.length - 3); return; }
+      if (s > 0) rx = rx.slice(s);
+      if (rx.length < 8) return;
+      var len = rx[4] | (rx[5] << 8);
+      if (rx.length < 6 + len) return;
+      var f = rx.slice(0, 6 + len); rx = rx.slice(6 + len);
+      if (f.length >= 11 && f[8] === 0x81 && f[9] === 0x82) {
+        acks[f[6] | (f[7] << 8)] = f[10];
+        if (!uploading) say(f[10] === 0 ? "Device said OK." : "Device reported an error.", f[10] === 0 ? "good" : "bad");
+      }
+    }
+  }
   function send(body, label) {
-    if (!chWrite) return;
+    if (!chWrite || uploading) return;
     queue = queue.then(function () {
       seq += 1;
-      return chWrite.writeValueWithoutResponse(frame(seq, body));
+      return writeRaw(IDOT.frame(seq, body));
     }).then(function () { say(label + " sent.", "good"); })
       .catch(function (e) { say("Could not send: " + (e && e.message ? e.message : e), "bad"); });
   }
 
-  function onReply(ev) {
-    var v = new Uint8Array(ev.target.value.buffer);
-    if (v.length >= 11 && v[8] === 0x81 && v[9] === 0x82) {
-      say(v[10] === 0 ? "Device said OK." : "Device reported an error.", v[10] === 0 ? "good" : "bad");
-    }
-  }
-
+  // ----- connect / disconnect -----
   function disconnect() {
     if (device && device.gatt && device.gatt.connected) device.gatt.disconnect();
     chWrite = null; setConnected(false);
   }
-
   async function connect() {
     if (!navigator.bluetooth) {
       say("This browser has no Bluetooth access. On iPhone, open this page in the Bluefy app.", "bad");
@@ -177,10 +589,7 @@ input[type=range] { width: 100%; height: 40px; accent-color: var(--accent); }
     var step = "choosing device";
     try {
       say("Waiting for the device list. Pick YS6232130038L.");
-      device = await navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: [SERVICE]
-      });
+      device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [SERVICE] });
       device.addEventListener("gattserverdisconnected", function () { chWrite = null; setConnected(false); say("Disconnected."); });
       step = "connecting to " + (device.name || "device");
       say("Connecting to " + (device.name || "device") + "...");
@@ -190,22 +599,22 @@ input[type=range] { width: 100%; height: 40px; accent-color: var(--accent); }
         catch (err) {
           if (attempt === 3) throw err;
           say("Connection attempt " + attempt + " failed, trying again...");
-          await new Promise(function (r) { setTimeout(r, 1500); });
+          await sleep(1500);
         }
       }
       step = "finding the iDot service";
       var svc = await server.getPrimaryService(SERVICE);
       step = "finding the write channel";
-      chWrite = await svc.getCharacteristic(WRITE);
+      var w = await svc.getCharacteristic(WRITE);
       step = "finding the reply channel";
       var chNotify = await svc.getCharacteristic(NOTIFY);
       step = "turning on replies";
       await chNotify.startNotifications();
       chNotify.addEventListener("characteristicvaluechanged", onReply);
       step = "sending hello";
-      seq = 1;
-      await chWrite.writeValueWithoutResponse(frame(seq, HELLO));
-      await new Promise(function (r) { setTimeout(r, 1200); });
+      chWrite = w; seq = 1; acks = {}; rx = [];
+      await writeRaw(IDOT.frame(seq, IDOT.HELLO));
+      await sleep(1200);
       setConnected(true);
       say("Connected. Try the On and Off buttons.", "good");
     } catch (e) {
@@ -217,25 +626,119 @@ input[type=range] { width: 100%; height: 40px; accent-color: var(--accent); }
     }
   }
 
+  // ----- simple controls -----
   $("connect").addEventListener("click", function () {
     if (device && device.gatt && device.gatt.connected) disconnect(); else connect();
   });
-  $("on").addEventListener("click", function () { send(powerBody(true), "On"); });
-  $("off").addEventListener("click", function () { send(powerBody(false), "Off"); });
+  $("on").addEventListener("click", function () { send(IDOT.powerBody(true), "On"); });
+  $("off").addEventListener("click", function () { send(IDOT.powerBody(false), "Off"); });
   $("bright").addEventListener("input", function (e) { $("bval").textContent = e.target.value; });
-  $("bright").addEventListener("change", function (e) { send(brightBody(parseInt(e.target.value, 10)), "Brightness " + e.target.value); });
+  $("bright").addEventListener("change", function (e) { send(IDOT.brightBody(parseInt(e.target.value, 10)), "Brightness " + e.target.value); });
 
-  var grid = $("gifs");
-  for (var i = 0; i < 16; i++) {
+  var grid = $("gifs"), cur = -1, gifButtons = [];
+  function mark(n) {
+    cur = n;
+    gifButtons.forEach(function (b, k) { b.className = k === n ? "sel" : ""; });
+    $("cur").textContent = "Slot: " + n;
+  }
+  function pick(n) { mark(n); send(IDOT.selectBody(n), "Animation " + n); }
+  for (var i = 0; i < 60; i++) {
     (function (n) {
       var b = document.createElement("button");
       b.type = "button"; b.textContent = n; b.disabled = true;
       b.setAttribute("aria-label", "Animation " + n);
-      if (n === 0 || n === 1 || n === 6) b.className = "known";
-      b.addEventListener("click", function () { send(gifBody(n), "Animation " + n); });
-      grid.appendChild(b);
+      b.addEventListener("click", function () { pick(n); });
+      grid.appendChild(b); gifButtons.push(b);
     })(i);
   }
+  $("prev").addEventListener("click", function () { pick(cur <= 0 ? 59 : cur - 1); });
+  $("next").addEventListener("click", function () { pick(cur >= 59 ? 0 : cur + 1); });
+
+  // ----- GIF upload -----
+  function stopPreview() { if (previewTimer) { clearTimeout(previewTimer); previewTimer = null; } }
+  function playPreview(p) {
+    stopPreview();
+    var cv = $("pv"), ctx = cv.getContext("2d");
+    cv.width = p.width; cv.height = p.height;
+    var n = 0;
+    (function step() {
+      var img = ctx.createImageData(p.width, p.height), idx = p.indexFrames[n], d = img.data;
+      for (var k = 0; k < idx.length; k++) {
+        var c = p.palette[idx[k]];
+        d[k * 4] = c[0]; d[k * 4 + 1] = c[1]; d[k * 4 + 2] = c[2]; d[k * 4 + 3] = 255;
+      }
+      ctx.putImageData(img, 0, 0);
+      var wait = p.delays[n]; n = (n + 1) % p.indexFrames.length;
+      previewTimer = setTimeout(step, wait);
+    })();
+  }
+  async function decodeAnyImage(file, bytes) {
+    var isGif = bytes.length > 6 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46;
+    if (isGif) return IDOT.decodeGif(bytes);
+    var bmp = await createImageBitmap(file);
+    var c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height;
+    var cx = c.getContext("2d"); cx.drawImage(bmp, 0, 0);
+    var data = cx.getImageData(0, 0, bmp.width, bmp.height).data;
+    return { width: bmp.width, height: bmp.height, frames: [{ rgba: new Uint8ClampedArray(data), delay: 1000 }], still: true };
+  }
+  $("file").addEventListener("change", async function (e) {
+    var file = e.target.files && e.target.files[0];
+    prepared = null; stopPreview(); $("previewBox").hidden = true; refreshButtons();
+    if (!file) return;
+    if (file.size > 15 * 1024 * 1024) { usay("That file is over 15 MB. Please pick a smaller GIF.", "bad"); return; }
+    usay("Preparing the picture...");
+    try {
+      await sleep(30);
+      var bytes = new Uint8Array(await file.arrayBuffer());
+      var dec = await decodeAnyImage(file, bytes);
+      await sleep(30);
+      prepared = IDOT.makeGif(dec, MAX_GIF_BYTES);
+      $("previewBox").hidden = false;
+      $("info").textContent = prepared.width + " by " + prepared.height + " pixels, " + prepared.frames + " frame" + (prepared.frames === 1 ? "" : "s") +
+        ", " + Math.round(prepared.bytes.length / 1024) + " KB, " + (prepared.ms / 1000).toFixed(1) + " seconds long." +
+        (dec.still ? " This is a still picture, which is untested." : "");
+      playPreview(prepared);
+      usay("Ready. Check the preview, then press Send.", "good");
+    } catch (err) {
+      prepared = null;
+      usay("Could not read that file: " + (err && err.message ? err.message : err), "bad");
+    }
+    refreshButtons();
+  });
+  $("slot").addEventListener("input", refreshButtons);
+
+  $("send").addEventListener("click", async function () {
+    var slot = parseInt($("slot").value, 10);
+    if (isNaN(slot) || slot < 0 || slot > 59) { usay("Slot must be a number from 0 to 59.", "bad"); return; }
+    if (!prepared || !chWrite || uploading) return;
+    uploading = true; refreshButtons();
+    var prog = $("prog"); prog.hidden = false; prog.value = 0;
+    try {
+      await queue;
+      var seconds = Math.max(1, Math.min(255, Math.ceil(prepared.ms / 1000)));
+      var steps = IDOT.uploadBodies(prepared.bytes, slot, seconds, IDOT.BLOBS.a);
+      prog.max = steps.length + 1;
+      for (var i = 0; i < steps.length; i++) {
+        var s = steps[i];
+        usay(s.label === "chunk" ? "Sending part " + (s.index + 1) + " of " + s.total + "..." : "Step: " + s.label + "...");
+        seq += 1; var my = seq; delete acks[my];
+        await writeRaw(IDOT.frame(my, s.body));
+        try { await waitAck(my, 6000); } catch (err) { throw new Error("at " + s.label + (s.label === "chunk" ? " " + (s.index + 1) : "") + ": " + err.message); }
+        prog.value = i + 1;
+      }
+      usay("Upload accepted. Switching to the slot...");
+      seq += 1; var sel = seq; delete acks[sel];
+      await writeRaw(IDOT.frame(sel, IDOT.selectBody(slot)));
+      await waitAck(sel, 6000);
+      prog.value = prog.max;
+      mark(slot);
+      usay("Done. Slot " + slot + " now holds your GIF and is showing.", "good");
+    } catch (err) {
+      usay("Upload stopped " + (err && err.message ? err.message : err) + ". Try again, with Slow and safe mode ticked.", "bad");
+    }
+    uploading = false; refreshButtons();
+  });
+
   setConnected(false);
   if (!navigator.bluetooth) say("This browser has no Bluetooth access. On iPhone, open this page in the Bluefy app.", "bad");
 })();
