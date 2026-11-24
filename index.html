@@ -174,20 +174,35 @@ input[type=range] { width: 100%; height: 40px; accent-color: var(--accent); }
       say("This browser has no Bluetooth access. On iPhone, open this page in the Bluefy app.", "bad");
       return;
     }
+    var step = "choosing device";
     try {
-      say("Waiting for the device list. Pick YS6232130038L. If no list appears, this page is not open in Bluefy.");
+      say("Waiting for the device list. Pick YS6232130038L.");
       device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: [SERVICE]
       });
       device.addEventListener("gattserverdisconnected", function () { chWrite = null; setConnected(false); say("Disconnected."); });
-      say("Connecting...");
-      var server = await device.gatt.connect();
+      step = "connecting to " + (device.name || "device");
+      say("Connecting to " + (device.name || "device") + "...");
+      var server = null;
+      for (var attempt = 1; attempt <= 3 && !server; attempt++) {
+        try { server = await device.gatt.connect(); }
+        catch (err) {
+          if (attempt === 3) throw err;
+          say("Connection attempt " + attempt + " failed, trying again...");
+          await new Promise(function (r) { setTimeout(r, 1500); });
+        }
+      }
+      step = "finding the iDot service";
       var svc = await server.getPrimaryService(SERVICE);
+      step = "finding the write channel";
       chWrite = await svc.getCharacteristic(WRITE);
+      step = "finding the reply channel";
       var chNotify = await svc.getCharacteristic(NOTIFY);
+      step = "turning on replies";
       await chNotify.startNotifications();
       chNotify.addEventListener("characteristicvaluechanged", onReply);
+      step = "sending hello";
       seq = 1;
       await chWrite.writeValueWithoutResponse(frame(seq, HELLO));
       await new Promise(function (r) { setTimeout(r, 1200); });
@@ -196,9 +211,9 @@ input[type=range] { width: 100%; height: 40px; accent-color: var(--accent); }
     } catch (e) {
       chWrite = null; setConnected(false);
       var name = e && e.name ? e.name : "";
-      if (name === "NotFoundError") say("No device chosen.");
-      else if (name === "SecurityError" || name === "NotAllowedError") say("Bluetooth is blocked here. Open this page in the Bluefy app, or in Chrome on Android or a laptop.", "bad");
-      else say("Could not connect: " + (e && e.message ? e.message : e), "bad");
+      if (name === "NotFoundError" && step === "choosing device") say("No device chosen.");
+      else if (name === "SecurityError" || name === "NotAllowedError") say("Bluetooth is blocked here. Open this page in the Bluefy app.", "bad");
+      else say("Failed while " + step + ". " + name + " " + (e && e.message ? e.message : e), "bad");
     }
   }
 
