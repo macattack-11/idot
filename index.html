@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>html,body{margin:0}</style>
+<title>iDot Control</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: one narrow column of big touch controls, built for a phone held in one hand. */
+:root {
+  --bg: #f3f5f7;
+  --surface: #ffffff;
+  --fg: #14202b;
+  --muted: #5a6b7a;
+  --line: #d7dee5;
+  --accent: #0b7d8c;
+  --accent-fg: #ffffff;
+  --good: #1a7f4b;
+  --bad: #b3261e;
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1419; --surface: #16202a; --fg: #e8eef3; --muted: #93a4b3;
+    --line: #28363f; --accent: #3fc1d1; --accent-fg: #07161a; --good: #4fd18b; --bad: #ff8a80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1419; --surface: #16202a; --fg: #e8eef3; --muted: #93a4b3;
+  --line: #28363f; --accent: #3fc1d1; --accent-fg: #07161a; --good: #4fd18b; --bad: #ff8a80;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.45;
+  padding-block: 20px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+h1 { font-family: var(--font-display); font-size: 1.6rem; margin: 0; letter-spacing: -0.01em; }
+h2 { font-family: var(--font-display); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 12px; font-weight: 500; }
+.sub { color: var(--muted); margin: 4px 0 0; font-size: 0.9rem; }
+section { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+button {
+  font: inherit; font-weight: 600; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; min-height: 56px; padding: 0 16px;
+  cursor: pointer; touch-action: manipulation;
+}
+button:active { transform: translateY(1px); }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+.status { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pill { display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--muted); }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+.pill.on .dot { background: var(--good); }
+.pill.on { color: var(--fg); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.slider-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.value { font-family: var(--font-display); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; height: 40px; accent-color: var(--accent); }
+.scale { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.8rem; }
+.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.grid button { min-height: 52px; font-variant-numeric: tabular-nums; }
+.grid button.known { border-color: var(--accent); }
+.hint { color: var(--muted); font-size: 0.85rem; margin: 12px 0 0; }
+.msg { font-size: 0.9rem; min-height: 1.4em; margin: 0; }
+.msg.bad { color: var(--bad); }
+.msg.good { color: var(--good); }
+@media (prefers-reduced-motion: reduce) { button:active { transform: none; } }
+</style>
+
+</head>
+<body>
+<main>
+  <header>
+    <h1>iDot Control</h1>
+    <p class="sub">Controls the iDot 3 straight over Bluetooth. No Loyplay app.</p>
+  </header>
+
+  <section aria-label="Connection">
+    <div class="status">
+      <span class="pill" id="pill"><span class="dot"></span><span id="state">Not connected</span></span>
+      <button class="primary" id="connect" type="button">Connect</button>
+    </div>
+    <p class="msg" id="msg" role="status"></p>
+  </section>
+
+  <section aria-label="Power">
+    <h2>Power</h2>
+    <div class="row">
+      <button type="button" id="on" disabled>On</button>
+      <button type="button" id="off" disabled>Off</button>
+    </div>
+  </section>
+
+  <section aria-label="Brightness">
+    <h2>Brightness</h2>
+    <div class="slider-head"><span>Level</span><span class="value" id="bval">8</span></div>
+    <input type="range" id="bright" min="1" max="15" step="1" value="8" disabled aria-label="Brightness level">
+    <div class="scale"><span>1 dim</span><span>15 bright</span></div>
+  </section>
+
+  <section aria-label="Animation">
+    <h2>Animation number</h2>
+    <div class="grid" id="gifs"></div>
+    <p class="hint">Outlined numbers (0, 1, 6) were seen in the Loyplay app recording. The others are untested, so tap them and see what the device shows.</p>
+  </section>
+</main>
+
+<script>
+(function () {
+  var SERVICE = "0000fff0-0000-1000-8000-00805f9b34fb";
+  var WRITE = "0000fff2-0000-1000-8000-00805f9b34fb";
+  var NOTIFY = "0000fff1-0000-1000-8000-00805f9b34fb";
+  var HELLO = [0xc1, 0x03, 0x0a, 0x00, 0x1b, 0x00, 0x04, 0x00, 0x06, 0x00];
+
+  var device = null, chWrite = null, seq = 1, queue = Promise.resolve();
+  var $ = function (id) { return document.getElementById(id); };
+
+  function frame(n, body) {
+    var len = 2 + body.length + 2;
+    var arr = [0xaa, 0x55, 0xff, 0xff, len & 255, len >> 8, n & 255, (n >> 8) & 255].concat(body);
+    var sum = arr.reduce(function (a, b) { return a + b; }, 0) & 0xffff;
+    arr.push(sum & 255, sum >> 8);
+    return new Uint8Array(arr);
+  }
+  function powerBody(on) { return [0xc1, 0x02, 0x04, 0x02, 0x00, on ? 1 : 0]; }
+  function brightBody(v) { return [0xc1, 0x02, 0x06, 0x02, 0x00, v]; }
+  function gifBody(i) {
+    var b = [0xc1, 0x02, 0x36, 0x3e, 0x01, i, 0x00];
+    for (var k = 1; k < 0x3c; k++) b.push(k);
+    return b;
+  }
+
+  function say(text, kind) { var m = $("msg"); m.textContent = text || ""; m.className = "msg" + (kind ? " " + kind : ""); }
+  function setConnected(on) {
+    $("pill").className = "pill" + (on ? " on" : "");
+    $("state").textContent = on ? "Connected" : "Not connected";
+    $("connect").textContent = on ? "Disconnect" : "Connect";
+    ["on", "off", "bright"].forEach(function (id) { $(id).disabled = !on; });
+    Array.prototype.forEach.call(document.querySelectorAll("#gifs button"), function (b) { b.disabled = !on; });
+  }
+
+  function send(body, label) {
+    if (!chWrite) return;
+    queue = queue.then(function () {
+      seq += 1;
+      return chWrite.writeValueWithoutResponse(frame(seq, body));
+    }).then(function () { say(label + " sent.", "good"); })
+      .catch(function (e) { say("Could not send: " + (e && e.message ? e.message : e), "bad"); });
+  }
+
+  function onReply(ev) {
+    var v = new Uint8Array(ev.target.value.buffer);
+    if (v.length >= 11 && v[8] === 0x81 && v[9] === 0x82) {
+      say(v[10] === 0 ? "Device said OK." : "Device reported an error.", v[10] === 0 ? "good" : "bad");
+    }
+  }
+
+  function disconnect() {
+    if (device && device.gatt && device.gatt.connected) device.gatt.disconnect();
+    chWrite = null; setConnected(false);
+  }
+
+  async function connect() {
+    if (!navigator.bluetooth) {
+      say("This browser has no Bluetooth access. On iPhone, open this page in the Bluefy app.", "bad");
+      return;
+    }
+    try {
+      say("Waiting for the device list. Pick YS6232130038L. If no list appears, this page is not open in Bluefy.");
+      device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: [SERVICE]
+      });
+      device.addEventListener("gattserverdisconnected", function () { chWrite = null; setConnected(false); say("Disconnected."); });
+      say("Connecting...");
+      var server = await device.gatt.connect();
+      var svc = await server.getPrimaryService(SERVICE);
+      chWrite = await svc.getCharacteristic(WRITE);
+      var chNotify = await svc.getCharacteristic(NOTIFY);
+      await chNotify.startNotifications();
+      chNotify.addEventListener("characteristicvaluechanged", onReply);
+      seq = 1;
+      await chWrite.writeValueWithoutResponse(frame(seq, HELLO));
+      await new Promise(function (r) { setTimeout(r, 1200); });
+      setConnected(true);
+      say("Connected. Try the On and Off buttons.", "good");
+    } catch (e) {
+      chWrite = null; setConnected(false);
+      var name = e && e.name ? e.name : "";
+      if (name === "NotFoundError") say("No device chosen.");
+      else if (name === "SecurityError" || name === "NotAllowedError") say("Bluetooth is blocked here. Open this page in the Bluefy app, or in Chrome on Android or a laptop.", "bad");
+      else say("Could not connect: " + (e && e.message ? e.message : e), "bad");
+    }
+  }
+
+  $("connect").addEventListener("click", function () {
+    if (device && device.gatt && device.gatt.connected) disconnect(); else connect();
+  });
+  $("on").addEventListener("click", function () { send(powerBody(true), "On"); });
+  $("off").addEventListener("click", function () { send(powerBody(false), "Off"); });
+  $("bright").addEventListener("input", function (e) { $("bval").textContent = e.target.value; });
+  $("bright").addEventListener("change", function (e) { send(brightBody(parseInt(e.target.value, 10)), "Brightness " + e.target.value); });
+
+  var grid = $("gifs");
+  for (var i = 0; i < 16; i++) {
+    (function (n) {
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = n; b.disabled = true;
+      b.setAttribute("aria-label", "Animation " + n);
+      if (n === 0 || n === 1 || n === 6) b.className = "known";
+      b.addEventListener("click", function () { send(gifBody(n), "Animation " + n); });
+      grid.appendChild(b);
+    })(i);
+  }
+  setConnected(false);
+  if (!navigator.bluetooth) say("This browser has no Bluetooth access. On iPhone, open this page in the Bluefy app.", "bad");
+})();
+</script>
+</body>
+</html>
