@@ -1,203 +1,320 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark" data-accent="teal">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1116">
 <style>html,body{margin:0}[hidden]{display:none!important}</style>
 <title>iDot Control</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
 <style>
-/* Layout: one narrow column of big touch controls, built for a phone held in one hand. */
+/* Design: a pixel display you can hold. Dark by default, one accent colour, an LED-dot grid on the preview,
+   and a bottom tab bar so everything sits within thumb reach. */
 :root {
-  --bg: #f3f5f7;
-  --surface: #ffffff;
-  --fg: #14202b;
-  --muted: #5a6b7a;
-  --line: #d7dee5;
-  --accent: #0b7d8c;
-  --accent-fg: #ffffff;
-  --good: #1a7f4b;
-  --bad: #b3261e;
+  --bg: #0b1116; --surface: #121b23; --surface2: #1a2530; --line: #243340;
+  --fg: #e9f0f5; --muted: #8da0b0; --bad: #ff8a80; --good: #5fd39a;
+  --accent: var(--accent-d); --accent-fg: #071014;
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --accent-glow: color-mix(in srgb, var(--accent) 38%, transparent);
+  --accent-d: #3fc1d1; --accent-l: #0b7d8c;
   --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
   --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0d1419; --surface: #16202a; --fg: #e8eef3; --muted: #93a4b3;
-    --line: #28363f; --accent: #3fc1d1; --accent-fg: #07161a; --good: #4fd18b; --bad: #ff8a80;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0d1419; --surface: #16202a; --fg: #e8eef3; --muted: #93a4b3;
-  --line: #28363f; --accent: #3fc1d1; --accent-fg: #07161a; --good: #4fd18b; --bad: #ff8a80;
+  --tabbar: 68px;
   color-scheme: dark;
 }
-* { box-sizing: border-box; }
+:root[data-accent="teal"]   { --accent-d: #3fc1d1; --accent-l: #0b7d8c; }
+:root[data-accent="blue"]   { --accent-d: #6aa6ff; --accent-l: #1f5fd1; }
+:root[data-accent="orange"] { --accent-d: #ffa04a; --accent-l: #c25a00; }
+:root[data-accent="red"]    { --accent-d: #ff6f6f; --accent-l: #c62828; }
+:root[data-accent="purple"] { --accent-d: #b794ff; --accent-l: #6a3fc4; }
+:root[data-accent="green"]  { --accent-d: #55d68f; --accent-l: #1a7f4b; }
+:root[data-accent="pink"]   { --accent-d: #ff80b8; --accent-l: #c2185b; }
+:root[data-theme="light"] {
+  --bg: #f1f4f7; --surface: #ffffff; --surface2: #e8edf2; --line: #d3dce5;
+  --fg: #13202b; --muted: #566a7b; --bad: #b3261e; --good: #1a7f4b;
+  --accent: var(--accent-l); --accent-fg: #ffffff; color-scheme: light;
+}
+@media (prefers-color-scheme: light) {
+  :root[data-theme="auto"] {
+    --bg: #f1f4f7; --surface: #ffffff; --surface2: #e8edf2; --line: #d3dce5;
+    --fg: #13202b; --muted: #566a7b; --bad: #b3261e; --good: #1a7f4b;
+    --accent: var(--accent-l); --accent-fg: #ffffff; color-scheme: light;
+  }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { background: var(--bg); }
 body {
-  background: var(--bg); color: var(--fg);
-  font-family: var(--font-body); font-size: 16px; line-height: 1.45;
-  padding-block: 20px 40px;
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.45;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: max(10px, env(safe-area-inset-top, 0px));
+  padding-bottom: calc(var(--tabbar) + 24px + env(safe-area-inset-bottom, 0px));
+  -webkit-text-size-adjust: 100%;
 }
-main { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
-h1 { font-family: var(--font-display); font-size: 1.6rem; margin: 0; letter-spacing: -0.01em; }
-h2 { font-family: var(--font-display); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 12px; font-weight: 500; }
-.sub { color: var(--muted); margin: 4px 0 0; font-size: 0.9rem; }
-section { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
-button {
-  font: inherit; font-weight: 600; color: var(--fg); background: var(--bg);
-  border: 1px solid var(--line); border-radius: 8px; min-height: 56px; padding: 0 16px;
-  cursor: pointer; touch-action: manipulation;
-}
-button:active { transform: translateY(1px); }
-button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+body.noscroll { overflow: hidden; }
+.app { max-width: 480px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; letter-spacing: -0.01em; }
+button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
-.status { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.pill { display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--muted); }
-.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
-.pill.on .dot { background: var(--good); }
-.pill.on { color: var(--fg); }
-.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.slider-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-.value { font-family: var(--font-display); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
-input[type=range] { width: 100%; height: 40px; accent-color: var(--accent); }
-.scale { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.8rem; }
-.grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
-.grid button { min-height: 44px; padding: 0; font-variant-numeric: tabular-nums; }
-.grid button.sel { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
-.cur { text-align: center; margin: 0 0 12px; font-family: var(--font-display); font-size: 1.1rem; }
-.hint { color: var(--muted); font-size: 0.85rem; margin: 12px 0 0; }
-.msg { font-size: 0.9rem; min-height: 1.4em; margin: 0; overflow-wrap: anywhere; }
-.msg.bad { color: var(--bad); }
-.msg.good { color: var(--good); }
-label.field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 0.9rem; }
-input[type=number], input[type=file] {
-  font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line);
-  border-radius: 8px; padding: 12px; min-height: 48px; width: 100%;
-}
-.steps { display: flex; flex-direction: column; gap: 14px; }
-.preview { display: flex; gap: 14px; align-items: center; }
-canvas#pv { width: 128px; height: 128px; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 6px; background: #000; flex: none; }
-.info { font-size: 0.9rem; color: var(--muted); margin: 0; }
-progress { width: 100%; height: 14px; accent-color: var(--accent); }
-.check { display: flex; gap: 10px; align-items: center; font-size: 0.9rem; color: var(--muted); }
-.check input { width: 20px; height: 20px; }
-
-.grid button { aspect-ratio: 1; min-height: 0; position: relative; background-size: cover; background-position: center; image-rendering: pixelated; overflow: hidden; }
-.grid button.has { color: #fff; font-size: 0.7rem; font-weight: 700; text-shadow: 0 1px 2px #000, 0 0 3px #000; display: flex; align-items: flex-end; justify-content: flex-start; padding: 0 0 2px 4px; }
-.grid button.target { outline: 3px solid var(--bad); outline-offset: -3px; }
-.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-.seg button { min-height: 44px; font-size: 0.85rem; }
-.seg button.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
-img#slotImg { width: 96px; height: 96px; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 6px; background: #000; display: block; margin: 0 auto 12px; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chips button { min-height: 40px; padding: 0 12px; font-size: 0.85rem; border-radius: 20px; }
-.results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.results button { padding: 0; min-height: 0; aspect-ratio: 1; overflow: hidden; background: #000; }
-.results img { width: 100%; height: 100%; object-fit: cover; display: block; }
-form.search { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-form.search input[type=search] { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-height: 48px; min-width: 0; }
-details summary { cursor: pointer; font-weight: 600; font-size: 0.9rem; min-height: 32px; }
-input[type=text].key { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-height: 48px; width: 100%; }
-.credit { font-size: 0.8rem; color: var(--muted); margin: 0; }
 a { color: var(--accent); }
-@media (prefers-reduced-motion: reduce) { button:active { transform: none; } }
+svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* top bar */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0 14px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand svg { width: 28px; height: 28px; stroke: none; fill: var(--accent); }
+.brand h1 { font-size: 1.35rem; font-weight: 700; }
+.chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 20px;
+  background: var(--surface); border: 1px solid var(--line); font-size: 0.85rem; font-weight: 600;
+}
+.chip .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+.chip.on .dot { background: var(--good); box-shadow: 0 0 8px var(--good); }
+.chip.busy .dot { background: var(--accent); animation: pulse 1s infinite; }
+.chip.cta { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+@keyframes pulse { 50% { opacity: 0.3; } }
+
+.tab { display: flex; flex-direction: column; gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
+.eyebrow { font-family: var(--font-display); font-size: 0.75rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin: 0 0 12px; }
+.muted { color: var(--muted); }
+.small { font-size: 0.85rem; }
+.btn {
+  min-height: 52px; padding: 0 18px; border-radius: 14px; border: 1px solid var(--line);
+  background: var(--surface2); font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.block { width: 100%; }
+.btn.ghost { background: transparent; }
+.btn:active { transform: translateY(1px); }
+
+/* Play: the matrix display */
+.stage { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 6px 0 2px; }
+.matrix {
+  position: relative; width: min(78vw, 320px); aspect-ratio: 1; border-radius: 22px; overflow: hidden; background: #000;
+  border: 1px solid var(--line); box-shadow: 0 0 0 6px var(--surface), 0 0 46px var(--accent-glow);
+}
+.matrix img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.matrix .dots {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle at center, transparent 42%, rgba(0, 0, 0, 0.62) 56%);
+  background-size: calc(100% / 64) calc(100% / 64);
+}
+.ph { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; padding: 20px; }
+.ph b { font-family: var(--font-display); font-size: 3.4rem; color: var(--accent); line-height: 1; text-shadow: 0 0 24px var(--accent-glow); }
+.ph span { color: var(--muted); font-size: 0.85rem; max-width: 22ch; }
+.nowmeta { text-align: center; }
+.nowmeta strong { font-family: var(--font-display); font-size: 1.15rem; }
+.nowmeta div { color: var(--muted); font-size: 0.85rem; min-height: 1.3em; overflow-wrap: anywhere; }
+.transport { display: grid; grid-template-columns: 56px 1fr 56px; gap: 10px; width: min(100%, 360px); align-items: center; }
+.round { width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface2); display: inline-flex; align-items: center; justify-content: center; }
+.controls { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; }
+.power { width: 76px; height: 76px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface2); color: var(--muted); display: inline-flex; align-items: center; justify-content: center; }
+.power svg { width: 32px; height: 32px; stroke-width: 2.2; }
+.power.on { color: var(--accent-fg); background: var(--accent); border-color: var(--accent); box-shadow: 0 0 26px var(--accent-glow); }
+.bright-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+.bright-head b { font-family: var(--font-display); font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; height: 36px; accent-color: var(--accent); }
+.empty-hint { text-align: center; }
+
+/* Library */
+.libhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.libhead h2 { font-size: 1.3rem; }
+.lib { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.cell {
+  position: relative; aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--line); background: var(--surface2) center / cover;
+  image-rendering: pixelated; padding: 0; overflow: hidden; font-family: var(--font-display); font-weight: 700; color: var(--muted);
+}
+.cell .n { position: absolute; left: 5px; bottom: 3px; font-size: 0.72rem; }
+.cell.has { color: #fff; }
+.cell.has .n { text-shadow: 0 1px 3px #000, 0 0 4px #000; }
+.cell.playing { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 0 18px var(--accent-glow); }
+.cell.playing::after { content: ""; position: absolute; top: 5px; right: 5px; border: 5px solid transparent; border-left: 8px solid var(--accent); border-right: 0; }
+.cell.chosen { box-shadow: 0 0 0 3px var(--fg); }
+
+/* Discover */
+.banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 14px; padding: 10px 14px; font-weight: 600; font-size: 0.9rem; }
+.banner button { border: 0; background: transparent; min-width: 36px; min-height: 36px; }
+form.search { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.input { font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 0 14px; min-height: 52px; min-width: 0; width: 100%; }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 6px; margin: 0 -16px; padding-inline: 16px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.pill { flex: none; min-height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid var(--line); background: var(--surface); font-size: 0.85rem; font-weight: 600; }
+.pill.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.results button { padding: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; aspect-ratio: 1; background: #000; }
+.results img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.credit { font-size: 0.78rem; color: var(--muted); text-align: center; margin: 0; }
+
+/* Settings */
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; background: var(--surface2); padding: 4px; border-radius: 14px; }
+.seg button { border: 0; background: transparent; min-height: 42px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; color: var(--muted); }
+.seg button.on { background: var(--surface); color: var(--fg); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); }
+.swatches { display: flex; flex-wrap: wrap; gap: 12px; }
+.sw { width: 46px; height: 46px; border-radius: 50%; border: 3px solid transparent; padding: 0; background: var(--c); position: relative; }
+.sw.on { border-color: var(--fg); }
+.sw.on::after { content: ""; position: absolute; left: 50%; top: 47%; width: 9px; height: 17px; margin: -10px 0 0 -4px; border: solid #0b1116; border-width: 0 3px 3px 0; transform: rotate(45deg); }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; }
+.row + .row { border-top: 1px solid var(--line); }
+.row p { margin: 0; }
+.switch { width: 52px; height: 32px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface2); position: relative; flex: none; padding: 0; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--muted); transition: transform 0.15s; }
+.switch.on { background: var(--accent); border-color: var(--accent); }
+.switch.on::after { transform: translateX(20px); background: var(--accent-fg); }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+
+/* Tab bar */
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; justify-content: center;
+  background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; max-width: 480px; padding: 0 max(8px, env(safe-area-inset-left, 0px)); }
+.tabs button { height: var(--tabbar); border: 0; background: transparent; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 0.72rem; font-weight: 600; }
+.tabs button.on { color: var(--accent); }
+.tabs button.on svg { filter: drop-shadow(0 0 8px var(--accent-glow)); }
+
+/* Toast */
+.toast {
+  position: fixed; left: 50%; bottom: calc(var(--tabbar) + 18px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 12px);
+  max-width: min(92vw, 440px); background: var(--fg); color: var(--bg); border-radius: 14px; padding: 12px 16px; font-size: 0.9rem; font-weight: 500;
+  opacity: 0; pointer-events: none; z-index: 60; transition: opacity 0.2s, transform 0.2s; text-align: center;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.bad { background: var(--bad); color: #14080a; }
+
+/* Sheet */
+.backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); z-index: 40; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; margin: 0 auto; max-width: 520px; max-height: 90vh; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-bottom: 0; border-radius: 24px 24px 0 0;
+  padding: 10px 18px calc(22px + env(safe-area-inset-bottom, 0px)); animation: rise 0.22s ease-out;
+}
+@keyframes rise { from { transform: translateY(40px); opacity: 0; } }
+.grab { width: 42px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 12px; }
+.shead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.shead h2 { font-size: 1.25rem; }
+.xbtn { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--surface2); display: inline-flex; align-items: center; justify-content: center; }
+.prevrow { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; }
+.thumbbox { position: relative; width: 112px; height: 112px; flex: none; border-radius: 14px; overflow: hidden; background: #000; border: 1px solid var(--line); }
+.thumbbox canvas, .thumbbox img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.thumbbox .dots { position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(circle at center, transparent 42%, rgba(0,0,0,.6) 56%); background-size: calc(100% / 64) calc(100% / 64); }
+.choice { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface2); min-height: 62px; }
+.choice[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent); }
+.choice .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--muted); flex: none; }
+.choice[aria-checked="true"] .radio { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 45%, transparent 50%); }
+.choice b { display: block; font-size: 0.95rem; }
+.choice span.s { color: var(--muted); font-size: 0.82rem; }
+.choice .mini { width: 38px; height: 38px; border-radius: 8px; background: var(--surface) center / cover; image-rendering: pixelated; border: 1px solid var(--line); flex: none; margin-left: auto; }
+.mini-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 4px 0; }
+progress { width: 100%; height: 10px; border-radius: 5px; accent-color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .sheet { animation: none; } .toast { transition: none; } .chip.busy .dot { animation: none; } }
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <h1>iDot Control</h1>
-    <p class="sub">Controls the iDot 3 straight over Bluetooth. No Loyplay app.</p>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="2" width="7" height="7" rx="1.6" opacity=".35"/><rect x="10.5" y="2" width="7" height="7" rx="1.6"/><rect x="19" y="2" width="7" height="7" rx="1.6" opacity=".6"/><rect x="2" y="10.5" width="7" height="7" rx="1.6"/><rect x="10.5" y="10.5" width="7" height="7" rx="1.6" opacity=".6"/><rect x="19" y="10.5" width="7" height="7" rx="1.6" opacity=".35"/><rect x="2" y="19" width="7" height="7" rx="1.6" opacity=".6"/><rect x="10.5" y="19" width="7" height="7" rx="1.6" opacity=".35"/><rect x="19" y="19" width="7" height="7" rx="1.6"/></svg>
+      <h1>iDot</h1>
+    </div>
+    <button class="chip cta" id="chip" type="button"><span class="dot"></span><span id="chipText">Connect</span></button>
   </header>
 
-  <section aria-label="Connection">
-    <div class="status">
-      <span class="pill" id="pill"><span class="dot"></span><span id="state">Not connected</span></span>
-      <button class="primary" id="connect" type="button">Connect</button>
-    </div>
-    <p class="msg" id="msg" role="status"></p>
-  </section>
+  <main>
+    <!-- PLAY -->
+    <section class="tab" id="tab-play" aria-label="Play">
+      <div class="stage">
+        <div class="matrix" id="nowFrame">
+          <img id="nowImg" alt="" hidden>
+          <div class="ph" id="nowPh"><b id="phNum">·</b><span id="phTxt">Connect to see what is playing</span></div>
+          <div class="dots"></div>
+        </div>
+        <div class="nowmeta"><strong id="nowSlot">Not connected</strong><div id="nowName"></div></div>
+        <div class="transport">
+          <button class="round" id="prev" type="button" aria-label="Previous slot" disabled><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <button class="btn" id="shuffle" type="button" disabled><svg viewBox="0 0 24 24"><path d="M3 7h3.5c2 0 3.2 1 4.3 2.6l2.4 3.8c1.1 1.6 2.3 2.6 4.3 2.6H21M3 17h3.5c1.4 0 2.4-.5 3.2-1.4M13.5 8.4C14.3 7.5 15.3 7 16.7 7H21M18.5 4.5L21 7l-2.5 2.5M18.5 14.5L21 17l-2.5 2.5"/></svg>Surprise me</button>
+          <button class="round" id="next" type="button" aria-label="Next slot" disabled><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+      </div>
+      <div class="card controls">
+        <button class="power" id="power" type="button" aria-label="Power" aria-pressed="false" disabled><svg viewBox="0 0 24 24"><path d="M12 3v9M6.3 6.6a8 8 0 1 0 11.4 0"/></svg></button>
+        <div>
+          <div class="bright-head"><span class="eyebrow" style="margin:0">Brightness</span><b id="bval">8</b></div>
+          <input type="range" id="bright" min="1" max="15" step="1" value="8" aria-label="Brightness" disabled>
+        </div>
+      </div>
+    </section>
 
-  <section aria-label="Power">
-    <h2>Power</h2>
-    <div class="row">
-      <button type="button" id="on" disabled>On</button>
-      <button type="button" id="off" disabled>Off</button>
-    </div>
-  </section>
+    <!-- LIBRARY -->
+    <section class="tab" id="tab-library" aria-label="Library" hidden>
+      <div class="libhead"><h2>Library</h2><span class="muted small" id="libCount"></span></div>
+      <div class="lib" id="lib"></div>
+      <p class="muted small" style="margin:0">The device cannot send its pictures back, so previews appear for GIFs you send from this app, on this browser. Tap a slot for options.</p>
+    </section>
 
-  <section aria-label="Brightness">
-    <h2>Brightness</h2>
-    <div class="slider-head"><span>Level</span><span class="value" id="bval">8</span></div>
-    <input type="range" id="bright" min="1" max="15" step="1" value="8" disabled aria-label="Brightness level">
-    <div class="scale"><span>1 dim</span><span>15 bright</span></div>
-  </section>
-
-  <section aria-label="Animation slots">
-    <h2>Animation slots</h2>
-    <p class="cur" id="cur">Slot: none chosen yet</p>
-    <img id="slotImg" alt="The GIF stored for this slot" hidden>
-    <div class="seg" role="group" aria-label="What tapping a slot does">
-      <button type="button" id="modeShow" class="on">Show on device</button>
-      <button type="button" id="modePick">Pick slot to replace</button>
-    </div>
-    <div class="row" style="margin-bottom:12px">
-      <button type="button" id="prev" disabled>Previous</button>
-      <button type="button" id="next" disabled>Next</button>
-    </div>
-    <div class="grid" id="gifs"></div>
-    <p class="hint">The device has 60 slots, numbered 0 to 59. The device cannot send its pictures back, so thumbnails appear only for GIFs sent from this page, and only in this browser.</p>
-  </section>
-
-  <section aria-label="Find GIFs online" id="findsec">
-    <h2>Find GIFs online</h2>
-    <div class="steps">
-      <details id="gdet">
-        <summary>GIPHY key (needed once)</summary>
-        <p class="hint">Make a free account at <a href="https://developers.giphy.com/dashboard/" target="_blank" rel="noopener">developers.giphy.com</a>, press Create an API Key, choose API, then paste the key here. It stays on this device.</p>
-        <input type="text" class="key" id="gkey" placeholder="Paste your GIPHY key" autocomplete="off" autocapitalize="off" spellcheck="false">
-        <div style="margin-top:8px"><button type="button" id="gsave" style="width:100%">Save key</button></div>
-      </details>
+    <!-- DISCOVER -->
+    <section class="tab" id="tab-discover" aria-label="Discover" hidden>
+      <div class="banner" id="targetBanner" hidden><span id="targetText"></span><button type="button" id="targetClear" aria-label="Cancel replacing"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <form class="search" id="gform">
-        <input type="search" id="gq" placeholder="Search, for example zelda or race car" aria-label="Search GIFs" autocomplete="off">
-        <button class="primary" type="submit" id="gbtn">Search</button>
+        <input class="input" type="search" id="gq" placeholder="Search GIFs, for example zelda" aria-label="Search GIFs" autocomplete="off">
+        <button class="btn primary" type="submit">Search</button>
       </form>
-      <label class="check"><input type="checkbox" id="gpixel" checked> Pixel art only (adds "pixel art" to your search)</label>
       <div class="chips" id="chips" aria-label="Quick searches"></div>
-      <p class="msg" id="gmsg" role="status"></p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="pill on" id="pixelToggle" aria-pressed="true">Pixel art only</button>
+        <button type="button" class="pill" id="uploadOwn">Use a GIF from this device</button>
+      </div>
+      <div class="card empty-hint" id="needKey" hidden>
+        <p style="margin:0 0 12px">To search online, add your free GIPHY key once.</p>
+        <button class="btn primary" type="button" id="goKey">Open settings</button>
+      </div>
+      <p class="muted small" id="gmsg" role="status" style="margin:0"></p>
       <div class="results" id="results"></div>
-      <button type="button" id="gmore" hidden>Load more</button>
-      <p class="credit">Powered by GIPHY. Tap a result to prepare it, then send it from the box below.</p>
-    </div>
-  </section>
+      <button class="btn block" type="button" id="gmore" hidden>Load more</button>
+      <p class="credit">Powered by GIPHY</p>
+    </section>
 
-  <section aria-label="Upload a GIF" id="upsec">
-    <h2>Put your own GIF on the device</h2>
-    <div class="steps">
-      <label class="field" for="slot">1. Slot to replace (0 to 59)
-        <input type="number" id="slot" min="0" max="59" step="1" value="49" inputmode="numeric">
-      </label>
-      <label class="field" for="file">2. Choose a GIF
-        <input type="file" id="file" accept="image/gif,image/*">
-      </label>
-      <div class="preview" id="previewBox" hidden>
-        <canvas id="pv" width="64" height="64" aria-label="Preview of the GIF that will be sent"></canvas>
-        <p class="info" id="info"></p>
+    <!-- SETTINGS -->
+    <section class="tab" id="tab-settings" aria-label="Settings" hidden>
+      <div class="card stack">
+        <h3 class="eyebrow" style="margin:0">Appearance</h3>
+        <div class="seg" role="group" aria-label="Theme" id="themeSeg">
+          <button type="button" data-v="dark">Dark</button><button type="button" data-v="light">Light</button><button type="button" data-v="auto">Auto</button>
+        </div>
+        <div class="swatches" id="swatches" role="group" aria-label="Accent colour"></div>
       </div>
-      <div>
-        <button class="primary" type="button" id="send" style="width:100%" disabled>3. Send to the device</button>
+      <div class="card stack">
+        <h3 class="eyebrow" style="margin:0">GIPHY key</h3>
+        <input class="input" type="text" id="gkey" placeholder="Paste your key" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button class="btn block" type="button" id="gsave">Save key</button>
+        <p class="muted small" style="margin:0">Free from <a href="https://developers.giphy.com/dashboard/" target="_blank" rel="noopener">developers.giphy.com</a>. It stays on this device only.</p>
       </div>
-      <progress id="prog" value="0" max="1" hidden></progress>
-      <p class="msg" id="umsg" role="status"></p>
-      <label class="check"><input type="checkbox" id="slow"> Slow and safe mode (try this if uploads fail)</label>
-    </div>
-    <p class="hint">The picture is shrunk to fit the 64 by 64 screen. Sending replaces what is in that slot. Only slot 49 has been tested so far. On iPhone, pick the GIF with "Choose File" from the Files app, because the Photos picker can flatten GIFs into still pictures.</p>
-  </section>
-</main>
+      <div class="card">
+        <h3 class="eyebrow">Connection</h3>
+        <div class="row"><div><p><b>Slow and safe mode</b></p><p class="muted small">Try this if uploads fail.</p></div><button class="switch" id="slow" type="button" role="switch" aria-checked="false" aria-label="Slow and safe mode"></button></div>
+        <div class="row"><div><p><b id="devName">Not connected</b></p><p class="muted small">Device</p></div><button class="btn" id="disc" type="button" disabled>Disconnect</button></div>
+      </div>
+      <div class="card">
+        <h3 class="eyebrow">Saved previews</h3>
+        <div class="row"><div><p><b id="prevCount">0 saved</b></p><p class="muted small">Kept on this browser only.</p></div><button class="btn" id="clearPrev" type="button">Clear</button></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<nav class="tabbar" aria-label="Sections"><div class="tabs" id="tabs">
+  <button type="button" data-tab="play" class="on" aria-label="Play"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M10 8.5l5 3.5-5 3.5z"/></svg>Play</button>
+  <button type="button" data-tab="library" aria-label="Library"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg>Library</button>
+  <button type="button" data-tab="discover" aria-label="Discover"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>Discover</button>
+  <button type="button" data-tab="settings" aria-label="Settings"><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></svg>Settings</button>
+</div></nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="backdrop" id="backdrop" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden></div>
+<input type="file" id="file" accept="image/gif,image/*" hidden>
 
 <script>
 /* iDot core: message building, GIF reading, resizing and writing. No outside libraries. */
@@ -536,10 +653,35 @@ var IDOT = (function () {
     return { bytes: result, width: w, height: h, ms: ms, frames: rgb.length, palette: palette, indexFrames: idx, delays: delays };
   }
 
+
+  // ---------- reading what the device says ----------
+  var QUERY_CURRENT = [0xc1, 0x03, 0x36, 0x00];
+
+  // f: one complete message from the device. Returns null if it is not one we understand.
+  function parseFrame(f) {
+    var n = f.length;
+    if (n < 11) return null;
+    var seq = f[6] | (f[7] << 8);
+    if (f[8] === 0x81 && f[9] === 0x82) return { type: "ack", seq: seq, status: f[10] };
+    if (f[8] === 0x81 && f[9] === 0x83 && f[10] === 0x36 && f[11] === 0x3e && f[12] === 0x01 && n >= 15) return { type: "slot", slot: f[13] };
+    if (f[8] === 0x81 && f[9] === 0x83 && f[10] === 0x0a && n >= 20 &&
+        f[n - 10] === 0x04 && f[n - 9] === 0x02 && f[n - 8] === 0x00 &&
+        f[n - 6] === 0x06 && f[n - 5] === 0x02 && f[n - 4] === 0x00) {
+      return { type: "info", power: f[n - 7] === 1, brightness: f[n - 3] };
+    }
+    return null;
+  }
+  // The device also sends a short note with no header when the slot changes.
+  function parseNotice(b) {
+    if (b.length === 6 && b[0] === 0xc1 && b[1] === 0x06 && b[2] === 0x36 && b[3] === 0x02 && b[4] === 0x01) return { type: "slot", slot: b[5] };
+    return null;
+  }
+
   return {
     frame: frame, HELLO: HELLO, BLOBS: BLOBS, CHUNK_SIZE: CHUNK_SIZE,
     powerBody: powerBody, brightBody: brightBody, selectBody: selectBody,
     uploadBodies: uploadBodies, decodeGif: decodeGif, makeGif: makeGif,
+    QUERY_CURRENT: QUERY_CURRENT, parseFrame: parseFrame, parseNotice: parseNotice,
     resizeArea: resizeArea, toRgb: toRgb, encodeGif: encodeGif, buildPalette: buildPalette, mapToPalette: mapToPalette
   };
 })();
@@ -548,22 +690,63 @@ if (typeof module !== "undefined") module.exports = IDOT;
 </script>
 <script>
 (function () {
+  "use strict";
   var SERVICE = "0000fff0-0000-1000-8000-00805f9b34fb";
   var WRITE = "0000fff2-0000-1000-8000-00805f9b34fb";
   var NOTIFY = "0000fff1-0000-1000-8000-00805f9b34fb";
   var MAX_GIF_BYTES = 105000;
+  var GKEY = "idot-giphy-key";
 
-  var device = null, chWrite = null, seq = 1, queue = Promise.resolve();
-  var acks = {}, rx = [], uploading = false, prepared = null, previewTimer = null;
-  var mode = "show", library = {}, slotUrl = null;
   var $ = function (id) { return document.getElementById(id); };
   var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+  var root = document.documentElement;
 
-  function say(text, kind) { var m = $("msg"); m.textContent = text || ""; m.className = "msg" + (kind ? " " + kind : ""); }
-  function usay(text, kind) { var m = $("umsg"); m.textContent = text || ""; m.className = "msg" + (kind ? " " + kind : ""); }
-  function gsay(text, kind) { var m = $("gmsg"); m.textContent = text || ""; m.className = "msg" + (kind ? " " + kind : ""); }
+  function h(tag, props, kids) {
+    var e = document.createElement(tag), k;
+    if (props) for (k in props) {
+      var v = props[k];
+      if (v === false || v == null) continue;
+      if (k === "class") e.className = v;
+      else if (k === "text") e.textContent = v;
+      else if (k === "html") e.innerHTML = v;
+      else if (k.slice(0, 2) === "on") e.addEventListener(k.slice(2), v);
+      else e.setAttribute(k, v === true ? "" : v);
+    }
+    (kids || []).forEach(function (c) { if (c != null) e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+    return e;
+  }
+  var CLOSE = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
-  // ----- remembered pictures (kept in this browser only) -----
+  function lsGet(k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  // ---------- state ----------
+  var S = { connected: false, connecting: false, power: null, bright: 8, cur: null, library: {}, urls: {},
+    target: null, fileTarget: null, prepared: null, uploading: false, tab: "play", send: null };
+  var settings = { theme: lsGet("idot-theme", "dark"), accent: lsGet("idot-accent", "teal"), slow: lsGet("idot-slow", "0") === "1" };
+  var device = null, chWrite = null, seq = 1, queue = Promise.resolve(), acks = {}, rx = [], previewTimer = null, toastTimer = null;
+
+  // ---------- small UI helpers ----------
+  function toast(msg, kind, ms) {
+    var t = $("toast");
+    t.textContent = msg; t.className = "toast show" + (kind ? " " + kind : "");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.className = "toast" + (kind ? " " + kind : ""); }, ms || (kind === "bad" ? 6500 : 2600));
+  }
+  function applyTheme() {
+    root.dataset.theme = settings.theme; root.dataset.accent = settings.accent;
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = getComputedStyle(root).getPropertyValue("--bg").trim() || "#0b1116";
+  }
+  function showTab(name) {
+    S.tab = name;
+    ["play", "library", "discover", "settings"].forEach(function (t) { $("tab-" + t).hidden = t !== name; });
+    Array.prototype.forEach.call($("tabs").children, function (b) { b.classList.toggle("on", b.dataset.tab === name); });
+    window.scrollTo(0, 0);
+    if (name === "discover") updateKeyNeed();
+  }
+
+  // ---------- remembered pictures (this browser only) ----------
   var db = (function () {
     var opening = null;
     function open() {
@@ -577,46 +760,80 @@ if (typeof module !== "undefined") module.exports = IDOT;
       });
       return opening;
     }
-    return {
-      put: function (slot, val) {
-        return open().then(function (d) {
-          return new Promise(function (res, rej) {
-            var t = d.transaction("slots", "readwrite"); t.objectStore("slots").put(val, slot);
-            t.oncomplete = function () { res(); }; t.onerror = function () { rej(t.error); };
-          });
+    function run(mode, fn) {
+      return open().then(function (d) {
+        return new Promise(function (res, rej) {
+          var t = d.transaction("slots", mode), out = {};
+          fn(t.objectStore("slots"), out);
+          t.oncomplete = function () { res(out); }; t.onerror = function () { rej(t.error); };
         });
-      },
+      });
+    }
+    return {
+      put: function (slot, val) { return run("readwrite", function (s) { s.put(val, slot); }); },
+      clear: function () { return run("readwrite", function (s) { s.clear(); }); },
       all: function () {
-        return open().then(function (d) {
-          return new Promise(function (res, rej) {
-            var out = {}, t = d.transaction("slots", "readonly"), c = t.objectStore("slots").openCursor();
-            c.onsuccess = function () { var cur = c.result; if (cur) { out[cur.key] = cur.value; cur.continue(); } };
-            t.oncomplete = function () { res(out); }; t.onerror = function () { rej(t.error); };
-          });
+        return run("readonly", function (s, out) {
+          var c = s.openCursor();
+          c.onsuccess = function () { var cur = c.result; if (cur) { out[cur.key] = cur.value; cur.continue(); } };
         });
       }
     };
   })();
-
-  // ----- buttons -----
-  function refreshButtons() {
-    var on = !!chWrite && !uploading;
-    ["on", "off", "bright", "prev", "next"].forEach(function (id) { $(id).disabled = !on; });
-    gifButtons.forEach(function (b) { b.disabled = !(mode === "pick" ? !uploading : on); });
-    $("send").disabled = !(chWrite && prepared && !uploading);
-    var slot = parseInt($("slot").value, 10);
-    $("send").textContent = "3. Send to slot " + (isNaN(slot) ? "?" : slot);
-    gifButtons.forEach(function (b, k) { b.classList.toggle("target", mode === "pick" && k === slot); });
+  function slotUrl(n) {
+    var it = S.library[n];
+    if (!it || !it.gif) return null;
+    if (!S.urls[n]) S.urls[n] = URL.createObjectURL(new Blob([it.gif], { type: "image/gif" }));
+    return S.urls[n];
   }
-  function setConnected(on) {
-    $("pill").className = "pill" + (on ? " on" : "");
-    $("state").textContent = on ? "Connected" : "Not connected";
-    $("connect").textContent = on ? "Disconnect" : "Connect";
-    refreshButtons();
-  }
+  function dropUrl(n) { if (S.urls[n]) { URL.revokeObjectURL(S.urls[n]); delete S.urls[n]; } }
+  function firstFree() { for (var i = 0; i < 60; i++) if (!S.library[i]) return i; return null; }
 
-  // ----- talking to the device -----
-  function pieceSize() { return $("slow").checked ? { n: 20, gap: 15 } : { n: 100, gap: 5 }; }
+  // ---------- rendering: Play ----------
+  function renderChip() {
+    var c = $("chip"), t = $("chipText");
+    c.className = "chip" + (S.connected ? " on" : S.connecting ? " busy" : " cta");
+    t.textContent = S.connected ? "Connected" : S.connecting ? "Connecting..." : "Connect";
+  }
+  function renderNow() {
+    var n = S.cur, url = n != null ? slotUrl(n) : null, img = $("nowImg"), it = n != null ? S.library[n] : null;
+    img.hidden = !url; $("nowPh").hidden = !!url;
+    if (url) { if (img.getAttribute("src") !== url) img.src = url; } else img.removeAttribute("src");
+    if (!S.connected) {
+      $("phNum").textContent = "·"; $("phTxt").textContent = "Connect to see what is playing";
+      $("nowSlot").textContent = "Not connected"; $("nowName").textContent = "";
+    } else if (n == null) {
+      $("phNum").textContent = "?"; $("phTxt").textContent = "Pick a slot to start";
+      $("nowSlot").textContent = "Nothing chosen yet"; $("nowName").textContent = "";
+    } else {
+      $("phNum").textContent = n; $("phTxt").textContent = "No preview for this slot yet";
+      $("nowSlot").textContent = "Slot " + n + " of 60";
+      $("nowName").textContent = it && it.name ? it.name : (url ? "" : "Sent from the Loyplay app, or not yet sent from here");
+    }
+  }
+  function renderControls() {
+    var on = S.connected && !S.uploading;
+    ["prev", "next", "shuffle", "power", "bright"].forEach(function (id) { $(id).disabled = !on; });
+    var p = $("power"); p.classList.toggle("on", S.power !== false); p.setAttribute("aria-pressed", S.power !== false ? "true" : "false");
+    $("bright").value = S.bright; $("bval").textContent = S.bright;
+    $("disc").disabled = !S.connected;
+    $("devName").textContent = S.connected && device && device.name ? device.name : "Not connected";
+  }
+  function renderLibrary() {
+    var count = Object.keys(S.library).length;
+    $("libCount").textContent = count + " of 60 have previews";
+    $("prevCount").textContent = count + " saved";
+    cells.forEach(function (c, n) {
+      var it = S.library[n];
+      c.style.backgroundImage = it && it.thumb ? "url(" + it.thumb + ")" : "";
+      c.classList.toggle("has", !!(it && it.thumb));
+      c.classList.toggle("playing", S.cur === n);
+    });
+  }
+  function refreshAll() { renderChip(); renderControls(); renderNow(); renderLibrary(); if (S.send) updateSend(); }
+
+  // ---------- talking to the device ----------
+  function pieceSize() { return settings.slow ? { n: 20, gap: 15 } : { n: 100, gap: 5 }; }
   async function writeRaw(bytes) {
     var ps = pieceSize();
     for (var off = 0; off < bytes.length; off += ps.n) {
@@ -628,64 +845,63 @@ if (typeof module !== "undefined") module.exports = IDOT;
     return new Promise(function (resolve, reject) {
       var t0 = Date.now();
       (function poll() {
-        if (acks[n] !== undefined) { return acks[n] === 0 ? resolve() : reject(new Error("the device refused it (code " + acks[n] + ")")); }
+        if (acks[n] !== undefined) return acks[n] === 0 ? resolve() : reject(new Error("the device refused it (code " + acks[n] + ")"));
         if (Date.now() - t0 > ms) return reject(new Error("no answer from the device"));
         setTimeout(poll, 20);
       })();
     });
   }
+  function handleParsed(p) {
+    if (!p) return;
+    if (p.type === "ack") {
+      acks[p.seq] = p.status;
+      if (p.status !== 0 && !S.uploading) toast("The device reported an error.", "bad");
+    } else if (p.type === "info") {
+      S.power = p.power; if (p.brightness >= 1 && p.brightness <= 15) S.bright = p.brightness; renderControls();
+    } else if (p.type === "slot") {
+      if (p.slot >= 0 && p.slot < 60) { S.cur = p.slot; renderNow(); renderLibrary(); if (S.send) updateSend(); }
+    }
+  }
   function onReply(ev) {
-    var dv = ev.target.value;
-    for (var i = 0; i < dv.byteLength; i++) rx.push(dv.getUint8(i));
+    var dv = ev.target.value, i, bytes = [];
+    for (i = 0; i < dv.byteLength; i++) bytes.push(dv.getUint8(i));
+    var notice = IDOT.parseNotice(bytes);
+    if (notice) { handleParsed(notice); return; }
+    rx = rx.concat(bytes);
     for (;;) {
-      var s = -1;
-      for (var k = 0; k + 3 < rx.length; k++) if (rx[k] === 0xaa && rx[k + 1] === 0x55 && rx[k + 2] === 0xff && rx[k + 3] === 0xff) { s = k; break; }
+      var s = -1, k;
+      for (k = 0; k + 3 < rx.length; k++) if (rx[k] === 0xaa && rx[k + 1] === 0x55 && rx[k + 2] === 0xff && rx[k + 3] === 0xff) { s = k; break; }
       if (s < 0) { if (rx.length > 3) rx = rx.slice(rx.length - 3); return; }
       if (s > 0) rx = rx.slice(s);
       if (rx.length < 8) return;
       var len = rx[4] | (rx[5] << 8);
       if (rx.length < 6 + len) return;
       var f = rx.slice(0, 6 + len); rx = rx.slice(6 + len);
-      if (f.length >= 11 && f[8] === 0x81 && f[9] === 0x82) {
-        acks[f[6] | (f[7] << 8)] = f[10];
-        if (!uploading) say(f[10] === 0 ? "Device said OK." : "Device reported an error.", f[10] === 0 ? "good" : "bad");
-      }
+      handleParsed(IDOT.parseFrame(f));
     }
   }
-  function send(body, label) {
-    if (!chWrite || uploading) return;
-    queue = queue.then(function () {
-      seq += 1;
-      return writeRaw(IDOT.frame(seq, body));
-    }).then(function () { say(label + " sent.", "good"); })
-      .catch(function (e) { say("Could not send: " + (e && e.message ? e.message : e), "bad"); });
+  function send(body, after) {
+    if (!chWrite || S.uploading) return;
+    queue = queue.then(function () { seq += 1; return writeRaw(IDOT.frame(seq, body)); })
+      .then(function () { if (after) after(); })
+      .catch(function (e) { toast("Could not send: " + (e && e.message ? e.message : e), "bad"); });
   }
 
-  // ----- connect / disconnect -----
-  function disconnect() {
-    if (device && device.gatt && device.gatt.connected) device.gatt.disconnect();
-    chWrite = null; setConnected(false);
-  }
   async function connect() {
-    if (!navigator.bluetooth) {
-      say("This browser has no Bluetooth access. On iPhone, open this page in the Bluefy app.", "bad");
-      return;
-    }
+    if (S.connecting || S.connected) return;
+    if (!navigator.bluetooth) { toast("This browser has no Bluetooth. On iPhone, open this page in the Bluefy app.", "bad", 9000); return; }
     var step = "choosing device";
+    S.connecting = true; renderChip();
     try {
-      say("Waiting for the device list. Pick YS6232130038L.");
       device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [SERVICE] });
-      device.addEventListener("gattserverdisconnected", function () { chWrite = null; setConnected(false); say("Disconnected."); });
-      step = "connecting to " + (device.name || "device");
-      say("Connecting to " + (device.name || "device") + "...");
+      device.addEventListener("gattserverdisconnected", function () {
+        chWrite = null; S.connected = false; S.connecting = false; refreshAll(); toast("Disconnected.");
+      });
+      step = "connecting to " + (device.name || "the device");
       var server = null;
       for (var attempt = 1; attempt <= 3 && !server; attempt++) {
         try { server = await device.gatt.connect(); }
-        catch (err) {
-          if (attempt === 3) throw err;
-          say("Connection attempt " + attempt + " failed, trying again...");
-          await sleep(1500);
-        }
+        catch (err) { if (attempt === 3) throw err; await sleep(1500); }
       }
       step = "finding the iDot service";
       var svc = await server.getPrimaryService(SERVICE);
@@ -696,267 +912,408 @@ if (typeof module !== "undefined") module.exports = IDOT;
       step = "turning on replies";
       await chNotify.startNotifications();
       chNotify.addEventListener("characteristicvaluechanged", onReply);
-      step = "sending hello";
+      step = "saying hello";
       chWrite = w; seq = 1; acks = {}; rx = [];
       await writeRaw(IDOT.frame(seq, IDOT.HELLO));
-      await sleep(1200);
-      setConnected(true);
-      say("Connected. Try the On and Off buttons.", "good");
+      await sleep(1000);
+      seq += 1; await writeRaw(IDOT.frame(seq, IDOT.QUERY_CURRENT));
+      await sleep(600);
+      S.connected = true; S.connecting = false;
+      refreshAll();
+      toast("Connected.");
     } catch (e) {
-      chWrite = null; setConnected(false);
+      chWrite = null; S.connected = false; S.connecting = false; refreshAll();
       var name = e && e.name ? e.name : "";
-      if (name === "NotFoundError" && step === "choosing device") say("No device chosen.");
-      else if (name === "SecurityError" || name === "NotAllowedError") say("Bluetooth is blocked here. Open this page in the Bluefy app.", "bad");
-      else say("Failed while " + step + ". " + name + " " + (e && e.message ? e.message : e), "bad");
+      if (name === "NotFoundError" && step === "choosing device") toast("No device chosen.");
+      else if (name === "SecurityError" || name === "NotAllowedError") toast("Bluetooth is blocked here. Open this page in the Bluefy app.", "bad", 9000);
+      else toast("Failed while " + step + ". " + name + " " + (e && e.message ? e.message : e), "bad", 9000);
     }
   }
+  function disconnect() { if (device && device.gatt && device.gatt.connected) device.gatt.disconnect(); }
 
-  // ----- simple controls -----
-  $("connect").addEventListener("click", function () {
-    if (device && device.gatt && device.gatt.connected) disconnect(); else connect();
+  // ---------- Play controls ----------
+  function pickSlot(n) { S.cur = n; renderNow(); renderLibrary(); send(IDOT.selectBody(n)); }
+  $("chip").addEventListener("click", function () { if (!S.connected) connect(); });
+  $("prev").addEventListener("click", function () { pickSlot(S.cur == null ? 59 : (S.cur + 59) % 60); });
+  $("next").addEventListener("click", function () { pickSlot(S.cur == null ? 0 : (S.cur + 1) % 60); });
+  $("shuffle").addEventListener("click", function () {
+    var n; do { n = Math.floor(Math.random() * 60); } while (n === S.cur);
+    pickSlot(n);
   });
-  $("on").addEventListener("click", function () { send(IDOT.powerBody(true), "On"); });
-  $("off").addEventListener("click", function () { send(IDOT.powerBody(false), "Off"); });
+  $("power").addEventListener("click", function () {
+    var turnOn = S.power === false;
+    send(IDOT.powerBody(turnOn), function () { S.power = turnOn; renderControls(); });
+  });
   $("bright").addEventListener("input", function (e) { $("bval").textContent = e.target.value; });
-  $("bright").addEventListener("change", function (e) { send(IDOT.brightBody(parseInt(e.target.value, 10)), "Brightness " + e.target.value); });
+  $("bright").addEventListener("change", function (e) { S.bright = parseInt(e.target.value, 10); send(IDOT.brightBody(S.bright)); });
 
-  // ----- slot gallery -----
-  var grid = $("gifs"), cur = -1, gifButtons = [];
-  function drawSlot(n) {
-    var b = gifButtons[n], item = library[n];
-    if (item && item.thumb) { b.style.backgroundImage = "url(" + item.thumb + ")"; b.classList.add("has"); }
-    else { b.style.backgroundImage = ""; b.classList.remove("has"); }
-  }
-  function showSlotImage(n) {
-    var img = $("slotImg");
-    if (slotUrl) { URL.revokeObjectURL(slotUrl); slotUrl = null; }
-    var item = library[n];
-    if (item && item.gif) {
-      slotUrl = URL.createObjectURL(new Blob([item.gif], { type: "image/gif" }));
-      img.src = slotUrl; img.hidden = false;
-    } else { img.hidden = true; img.removeAttribute("src"); }
-  }
-  function mark(n) {
-    cur = n;
-    gifButtons.forEach(function (b, k) { b.classList.toggle("sel", k === n); });
-    $("cur").textContent = "Slot: " + n;
-    showSlotImage(n);
-  }
-  function pick(n) { mark(n); send(IDOT.selectBody(n), "Animation " + n); }
-  for (var i = 0; i < 60; i++) {
-    (function (n) {
-      var b = document.createElement("button");
-      b.type = "button"; b.textContent = n; b.disabled = true;
-      b.setAttribute("aria-label", "Slot " + n);
-      b.addEventListener("click", function () {
-        if (mode === "pick") {
-          $("slot").value = n; mark(n); refreshButtons();
-          usay("Slot " + n + " will be replaced when you press Send.");
-          $("upsec").scrollIntoView({ behavior: "smooth", block: "start" });
-        } else { pick(n); }
-      });
-      grid.appendChild(b); gifButtons.push(b);
-    })(i);
-  }
-  $("prev").addEventListener("click", function () { pick(cur <= 0 ? 59 : cur - 1); });
-  $("next").addEventListener("click", function () { pick(cur >= 59 ? 0 : cur + 1); });
-  function setMode(m) {
-    mode = m;
-    $("modeShow").className = m === "show" ? "on" : "";
-    $("modePick").className = m === "pick" ? "on" : "";
-    refreshButtons();
-  }
-  $("modeShow").addEventListener("click", function () { setMode("show"); });
-  $("modePick").addEventListener("click", function () { setMode("pick"); });
-  try {
-    db.all().then(function (all) {
-      library = all;
-      Object.keys(all).forEach(function (k) { var n = parseInt(k, 10); if (n >= 0 && n < 60) drawSlot(n); });
-    }).catch(function () {});
-  } catch (e) {}
+  // ---------- Library ----------
+  var cells = [];
+  (function () {
+    var lib = $("lib");
+    for (var i = 0; i < 60; i++) {
+      (function (n) {
+        var c = h("button", { class: "cell", type: "button", "aria-label": "Slot " + n, onclick: function () { openSlotSheet(n); } }, [h("span", { class: "n", text: n })]);
+        lib.appendChild(c); cells.push(c);
+      })(i);
+    }
+  })();
 
-  // ----- preparing a picture for the device -----
+  // ---------- sheets ----------
+  function openSheet(nodes) {
+    var sh = $("sheet"); sh.textContent = "";
+    nodes.forEach(function (n) { sh.appendChild(n); });
+    sh.hidden = false; $("backdrop").hidden = false; document.body.classList.add("noscroll"); sh.scrollTop = 0;
+  }
+  function closeSheet() {
+    if (S.uploading) return;
+    $("sheet").hidden = true; $("backdrop").hidden = true; document.body.classList.remove("noscroll");
+    stopPreview(); S.send = null;
+  }
+  function sheetHead(title) {
+    return [h("div", { class: "grab" }), h("div", { class: "shead" }, [h("h2", { id: "sheetTitle", text: title }),
+      h("button", { class: "xbtn", type: "button", "aria-label": "Close", html: CLOSE, onclick: closeSheet })])];
+  }
+  $("backdrop").addEventListener("click", closeSheet);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("sheet").hidden) closeSheet(); });
+
+  function thumbBox(n) {
+    var url = slotUrl(n), box = h("div", { class: "thumbbox" });
+    if (url) box.appendChild(h("img", { src: url, alt: "Slot " + n }));
+    else box.appendChild(h("div", { class: "ph", style: "padding:6px" }, [h("b", { style: "font-size:2rem", text: n })]));
+    box.appendChild(h("div", { class: "dots" }));
+    return box;
+  }
+  function openSlotSheet(n) {
+    var it = S.library[n];
+    var info = h("div", {}, [
+      h("b", { text: it && it.name ? it.name : (it ? "Saved GIF" : "No preview yet") }),
+      h("div", { class: "muted small", text: S.cur === n ? "Playing now" : (it ? "Sent from this app" : "Sent from the Loyplay app, or never sent from here") })
+    ]);
+    var showBtn = h("button", { class: "btn primary block", type: "button", text: S.connected ? "Show on device" : "Connect to show it",
+      onclick: function () { if (!S.connected) { connect(); return; } closeSheet(); pickSlot(n); showTab("play"); } });
+    openSheet(sheetHead("Slot " + n).concat([
+      h("div", { class: "prevrow" }, [thumbBox(n), info]),
+      h("div", { class: "stack" }, [
+        showBtn,
+        h("button", { class: "btn block", type: "button", text: "Replace with a GIF from this device",
+          onclick: function () { S.fileTarget = n; closeSheet(); $("file").click(); } }),
+        h("button", { class: "btn block", type: "button", text: "Replace with a GIF from the internet",
+          onclick: function () { S.target = n; closeSheet(); showTab("discover"); renderTarget(); } })
+      ])
+    ]));
+  }
+
+  // ---------- preparing a picture ----------
   function stopPreview() { if (previewTimer) { clearTimeout(previewTimer); previewTimer = null; } }
-  function playPreview(p) {
+  function paint(ctx, p, k) {
+    var img = ctx.createImageData(p.width, p.height), idx = p.indexFrames[k], d = img.data;
+    for (var i = 0; i < idx.length; i++) {
+      var c = p.palette[idx[i]];
+      d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2]; d[i * 4 + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  function playPreview(p, cv) {
     stopPreview();
-    var cv = $("pv"), ctx = cv.getContext("2d");
     cv.width = p.width; cv.height = p.height;
-    var n = 0;
+    var ctx = cv.getContext("2d"), n = 0;
     (function step() {
-      var img = ctx.createImageData(p.width, p.height), idx = p.indexFrames[n], d = img.data;
-      for (var k = 0; k < idx.length; k++) {
-        var c = p.palette[idx[k]];
-        d[k * 4] = c[0]; d[k * 4 + 1] = c[1]; d[k * 4 + 2] = c[2]; d[k * 4 + 3] = 255;
-      }
-      ctx.putImageData(img, 0, 0);
+      paint(ctx, p, n);
       var wait = p.delays[n]; n = (n + 1) % p.indexFrames.length;
       previewTimer = setTimeout(step, wait);
     })();
   }
   function thumbOf(p) {
     var c = document.createElement("canvas"); c.width = p.width; c.height = p.height;
-    var ctx = c.getContext("2d"), img = ctx.createImageData(p.width, p.height), idx = p.indexFrames[0];
-    for (var k = 0; k < idx.length; k++) {
-      var col = p.palette[idx[k]];
-      img.data[k * 4] = col[0]; img.data[k * 4 + 1] = col[1]; img.data[k * 4 + 2] = col[2]; img.data[k * 4 + 3] = 255;
-    }
-    ctx.putImageData(img, 0, 0);
+    paint(c.getContext("2d"), p, 0);
     return c.toDataURL("image/png");
   }
-  async function decodeAnyImage(blobOrFile, bytes) {
+  async function decodeAny(blob, bytes) {
     var isGif = bytes.length > 6 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46;
     if (isGif) return IDOT.decodeGif(bytes);
-    var bmp = await createImageBitmap(blobOrFile);
+    var bmp = await createImageBitmap(blob);
     var c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height;
     var cx = c.getContext("2d"); cx.drawImage(bmp, 0, 0);
     var data = cx.getImageData(0, 0, bmp.width, bmp.height).data;
     return { width: bmp.width, height: bmp.height, frames: [{ rgba: new Uint8ClampedArray(data), delay: 1000 }], still: true };
   }
-  async function prepareFromBytes(blob, bytes, label) {
-    prepared = null; stopPreview(); $("previewBox").hidden = true; refreshButtons();
-    usay("Preparing the picture...");
+  // Fills an open send sheet once the picture has been shrunk.
+  async function fillSend(mine, blob, bytes, label) {
     try {
-      await sleep(30);
-      var dec = await decodeAnyImage(blob, bytes);
-      await sleep(30);
-      prepared = IDOT.makeGif(dec, MAX_GIF_BYTES);
-      prepared.label = label || "";
-      $("previewBox").hidden = false;
-      $("info").textContent = prepared.width + " by " + prepared.height + " pixels, " + prepared.frames + " frame" + (prepared.frames === 1 ? "" : "s") +
-        ", " + Math.round(prepared.bytes.length / 1024) + " KB, " + (prepared.ms / 1000).toFixed(1) + " seconds long." +
-        (dec.still ? " This is a still picture, which is untested." : "");
-      playPreview(prepared);
-      usay("Ready. Check the preview, then press Send.", "good");
+      await sleep(40);
+      var dec = await decodeAny(blob, bytes);
+      await sleep(20);
+      var p = IDOT.makeGif(dec, MAX_GIF_BYTES);
+      p.label = label || ""; p.still = !!dec.still;
+      if (S.send !== mine) return;
+      S.prepared = p;
+      playPreview(p, mine.r.cv);
+      mine.r.title.textContent = label ? (label.length > 34 ? label.slice(0, 33) + "\u2026" : label) : "Your GIF";
+      mine.r.meta.textContent = p.frames + " frame" + (p.frames === 1 ? "" : "s") + ", " + (p.ms / 1000).toFixed(1) + " s, " + Math.round(p.bytes.length / 1024) + " KB" + (p.still ? ". Still picture, untested." : "");
     } catch (err) {
-      prepared = null;
-      usay("Could not read that file: " + (err && err.message ? err.message : err), "bad");
+      if (S.send !== mine) return;
+      mine.r.title.textContent = "Could not read this file";
+      mine.r.meta.textContent = err && err.message ? err.message : String(err);
     }
-    refreshButtons();
+    if (S.send === mine) updateSend();
   }
-  $("file").addEventListener("change", async function (e) {
-    var file = e.target.files && e.target.files[0];
-    if (!file) { prepared = null; stopPreview(); $("previewBox").hidden = true; refreshButtons(); return; }
-    if (file.size > 15 * 1024 * 1024) { usay("That file is over 15 MB. Please pick a smaller GIF.", "bad"); return; }
-    var bytes = new Uint8Array(await file.arrayBuffer());
-    await prepareFromBytes(file, bytes, file.name);
-  });
-  $("slot").addEventListener("input", refreshButtons);
+  function startSend(blob, bytes, label, target) {
+    S.prepared = null; openSend(target);
+    return fillSend(S.send, blob, bytes, label);
+  }
 
-  // ----- sending to the device -----
-  $("send").addEventListener("click", async function () {
-    var slot = parseInt($("slot").value, 10);
-    if (isNaN(slot) || slot < 0 || slot > 59) { usay("Slot must be a number from 0 to 59.", "bad"); return; }
-    if (!prepared || !chWrite || uploading) return;
-    uploading = true; refreshButtons();
-    var prog = $("prog"); prog.hidden = false; prog.value = 0;
+  // ---------- the send sheet ----------
+  function sendSlot() {
+    var sd = S.send; if (!sd) return null;
+    if (sd.choice === "current") return S.cur;
+    if (sd.choice === "free") return firstFree();
+    return sd.slot;
+  }
+  function openSend(target) {
+    var sd = { choice: "pick", slot: null, gridOpen: false, r: {} }, r = sd.r;
+    if (target != null) { sd.slot = target; }
+    else if (S.cur != null) sd.choice = "current";
+    else sd.gridOpen = true;
+    S.send = sd;
+
+    r.cv = h("canvas", { width: 64, height: 64 });
+    r.title = h("b", { text: "Preparing your GIF..." });
+    r.meta = h("div", { class: "muted small", text: "Shrinking it to fit the 64 by 64 screen" });
+
+    function choice(id, titleText) {
+      var el = { sub: h("span", { class: "s" }), mini: h("span", { class: "mini" }) };
+      el.btn = h("button", { class: "choice", type: "button", role: "radio", "aria-checked": "false", onclick: function () {
+        if (S.uploading) return;
+        if (id === "pick") { sd.choice = "pick"; sd.gridOpen = !sd.gridOpen || sd.slot == null; }
+        else { sd.choice = id; sd.gridOpen = false; }
+        updateSend();
+      } }, [h("span", { class: "radio" }), h("span", {}, [h("b", { text: titleText }), el.sub]), el.mini]);
+      return el;
+    }
+    r.cCur = choice("current", "Replace what is playing now");
+    r.cFree = choice("free", "Use the first slot without a preview");
+    r.cPick = choice("pick", "Choose a slot");
+
+    r.grid = h("div", { class: "mini-grid", role: "group", "aria-label": "Choose a slot" });
+    r.gcells = [];
+    for (var i = 0; i < 60; i++) {
+      (function (n) {
+        var c = h("button", { class: "cell", type: "button", "aria-label": "Slot " + n, onclick: function () {
+          if (S.uploading) return; sd.choice = "pick"; sd.slot = n; sd.gridOpen = false; updateSend();
+        } }, [h("span", { class: "n", text: n })]);
+        r.grid.appendChild(c); r.gcells.push(c);
+      })(i);
+    }
+    r.prog = h("progress", { value: "0", max: "1", hidden: true });
+    r.status = h("p", { class: "muted small", style: "margin:0;min-height:1.3em", role: "status" });
+    r.btn = h("button", { class: "btn primary block", type: "button", text: "Preparing...", disabled: true, onclick: onSendClick });
+
+    openSheet(sheetHead("Send to your iDot").concat([
+      h("div", { class: "prevrow" }, [h("div", { class: "thumbbox" }, [r.cv, h("div", { class: "dots" })]), h("div", {}, [r.title, r.meta])]),
+      h("p", { class: "eyebrow", text: "Where should it go?" }),
+      h("div", { class: "stack", role: "radiogroup", "aria-label": "Where should it go" }, [r.cCur.btn, r.cFree.btn, r.cPick.btn, r.grid]),
+      h("div", { class: "stack", style: "margin-top:16px" }, [r.prog, r.status, r.btn])
+    ]));
+    updateSend();
+  }
+  function setMini(el, n) {
+    var it = n != null ? S.library[n] : null;
+    el.style.backgroundImage = it && it.thumb ? "url(" + it.thumb + ")" : "";
+    el.style.display = it && it.thumb ? "" : "none";
+  }
+  function updateSend() {
+    var sd = S.send; if (!sd) return;
+    var r = sd.r, free = firstFree(), t = sendSlot();
+    if (sd.choice === "current" && S.cur == null) sd.choice = "pick";
+    if (sd.choice === "free" && free == null) sd.choice = "pick";
+    r.cCur.btn.disabled = S.cur == null; r.cCur.sub.textContent = S.cur != null ? "Slot " + S.cur : "Connect to find out which one";
+    setMini(r.cCur.mini, S.cur);
+    r.cFree.btn.disabled = free == null; r.cFree.sub.textContent = free != null ? "Slot " + free : "Every slot already has one";
+    setMini(r.cFree.mini, null);
+    r.cPick.sub.textContent = sd.slot != null ? "Slot " + sd.slot + (sd.gridOpen ? "" : ". Tap to change") : "Tap a slot below";
+    setMini(r.cPick.mini, sd.slot);
+    r.cCur.btn.setAttribute("aria-checked", sd.choice === "current" ? "true" : "false");
+    r.cFree.btn.setAttribute("aria-checked", sd.choice === "free" ? "true" : "false");
+    r.cPick.btn.setAttribute("aria-checked", sd.choice === "pick" ? "true" : "false");
+    r.grid.hidden = !(sd.choice === "pick" && sd.gridOpen);
+    r.gcells.forEach(function (c, n) {
+      var it = S.library[n];
+      c.style.backgroundImage = it && it.thumb ? "url(" + it.thumb + ")" : "";
+      c.classList.toggle("has", !!(it && it.thumb));
+      c.classList.toggle("chosen", sd.slot === n && sd.choice === "pick");
+      c.classList.toggle("playing", S.cur === n);
+    });
+    t = sendSlot();
+    if (S.uploading) { r.btn.disabled = true; return; }
+    if (!S.prepared) { r.btn.disabled = true; r.btn.textContent = "Preparing..."; return; }
+    if (!S.connected) { r.btn.disabled = S.connecting; r.btn.textContent = "Connect to send"; return; }
+    if (t == null) { r.btn.disabled = true; r.btn.textContent = "Choose a slot"; return; }
+    r.btn.disabled = false; r.btn.textContent = "Send to slot " + t;
+  }
+  async function onSendClick() {
+    if (!S.connected) { await connect(); if (S.send) updateSend(); return; }
+    var slot = sendSlot(); if (slot == null || !S.prepared || S.uploading) return;
+    var sd = S.send, r = sd.r, p = S.prepared;
+    S.uploading = true; renderControls(); updateSend();
+    r.prog.hidden = false; r.prog.value = 0;
     try {
       await queue;
-      var seconds = Math.max(1, Math.min(255, Math.ceil(prepared.ms / 1000)));
-      var steps = IDOT.uploadBodies(prepared.bytes, slot, seconds, IDOT.BLOBS.a);
-      prog.max = steps.length + 1;
+      var seconds = Math.max(1, Math.min(255, Math.ceil(p.ms / 1000)));
+      var steps = IDOT.uploadBodies(p.bytes, slot, seconds, IDOT.BLOBS.a);
+      r.prog.max = steps.length + 1;
       for (var i = 0; i < steps.length; i++) {
         var s = steps[i];
-        usay(s.label === "chunk" ? "Sending part " + (s.index + 1) + " of " + s.total + "..." : "Step: " + s.label + "...");
+        r.status.textContent = s.label === "chunk" ? "Sending part " + (s.index + 1) + " of " + s.total + "..." : "Getting ready...";
         seq += 1; var my = seq; delete acks[my];
         await writeRaw(IDOT.frame(my, s.body));
         try { await waitAck(my, 6000); } catch (err) { throw new Error("at " + s.label + (s.label === "chunk" ? " " + (s.index + 1) : "") + ": " + err.message); }
-        prog.value = i + 1;
+        r.prog.value = i + 1;
       }
-      usay("Upload accepted. Switching to the slot...");
+      r.status.textContent = "Switching to it...";
       seq += 1; var sel = seq; delete acks[sel];
       await writeRaw(IDOT.frame(sel, IDOT.selectBody(slot)));
       await waitAck(sel, 6000);
-      prog.value = prog.max;
-      library[slot] = { thumb: thumbOf(prepared), gif: prepared.bytes, name: prepared.label || "", when: Date.now() };
-      drawSlot(slot);
-      try { await db.put(slot, library[slot]); } catch (e) {}
-      mark(slot);
-      usay("Done. Slot " + slot + " now holds your GIF and is showing.", "good");
+      dropUrl(slot);
+      S.library[slot] = { thumb: thumbOf(p), gif: p.bytes, name: p.label || "", when: Date.now() };
+      try { await db.put(slot, S.library[slot]); } catch (e) {}
+      S.cur = slot; S.target = null; renderTarget();
+      S.uploading = false;
+      closeSheet(); refreshAll(); showTab("play");
+      toast("Sent to slot " + slot + ". It is playing now.");
+      return;
     } catch (err) {
-      usay("Upload stopped " + (err && err.message ? err.message : err) + ". Try again, with Slow and safe mode ticked.", "bad");
+      r.status.textContent = "Stopped " + (err && err.message ? err.message : err) + ". Try again, or turn on Slow and safe mode in Settings.";
+      r.status.style.color = "var(--bad)";
     }
-    uploading = false; refreshButtons();
-  });
+    S.uploading = false; renderControls(); if (S.send) updateSend();
+  }
 
-  // ----- finding GIFs online (GIPHY) -----
-  var GKEY = "idot-giphy-key", gOffset = 0, gQuery = "", gBusy = false, PAGE = 24;
+  // ---------- Discover ----------
   var CHIPS = ["Video games", "Mario", "Zelda", "Pokemon", "Sonic", "Minecraft", "Football", "Basketball", "Cars", "Anime", "Animals", "Space", "Retro"];
-  function savedKey() { try { return localStorage.getItem(GKEY) || ""; } catch (e) { return ""; } }
-  $("gkey").value = savedKey();
-  $("gdet").open = !savedKey();
-  $("gsave").addEventListener("click", function () {
-    var k = $("gkey").value.trim();
-    try { localStorage.setItem(GKEY, k); } catch (e) {}
-    gsay(k ? "Key saved on this device." : "Key cleared.", k ? "good" : "");
-    if (k) $("gdet").open = false;
-  });
+  var gOffset = 0, gQuery = "", gBusy = false, PAGE = 24, pixelOnly = true;
+  function savedKey() { return lsGet(GKEY, "").trim(); }
+  function updateKeyNeed() { $("needKey").hidden = !!savedKey(); }
+  function renderTarget() {
+    $("targetBanner").hidden = S.target == null;
+    if (S.target != null) $("targetText").textContent = "Choosing a replacement for slot " + S.target;
+  }
   CHIPS.forEach(function (c) {
-    var b = document.createElement("button");
-    b.type = "button"; b.textContent = c;
-    b.addEventListener("click", function () { $("gq").value = c; search(true); });
-    $("chips").appendChild(b);
+    $("chips").appendChild(h("button", { type: "button", class: "pill", text: c, onclick: function () { $("gq").value = c; search(true); } }));
   });
+  $("pixelToggle").addEventListener("click", function () {
+    pixelOnly = !pixelOnly; $("pixelToggle").classList.toggle("on", pixelOnly); $("pixelToggle").setAttribute("aria-pressed", pixelOnly ? "true" : "false");
+  });
+  $("uploadOwn").addEventListener("click", function () { S.fileTarget = S.target; $("file").click(); });
+  $("targetClear").addEventListener("click", function () { S.target = null; renderTarget(); });
+  $("goKey").addEventListener("click", function () { showTab("settings"); $("gkey").focus(); });
   $("gform").addEventListener("submit", function (e) { e.preventDefault(); search(true); });
   $("gmore").addEventListener("click", function () { search(false); });
+  function gsay(t, bad) { var m = $("gmsg"); m.textContent = t || ""; m.style.color = bad ? "var(--bad)" : ""; }
 
   async function search(fresh) {
     if (gBusy) return;
-    var key = ($("gkey").value || savedKey()).trim();
-    if (!key) { $("gdet").open = true; gsay("Paste your GIPHY key first.", "bad"); return; }
-    var typed = $("gq").value.trim();
+    var key = savedKey();
+    if (!key) { updateKeyNeed(); gsay("Add your GIPHY key in Settings first.", true); return; }
     if (fresh) {
-      if (!typed) { gsay("Type something to search for, or tap one of the quick searches.", "bad"); return; }
-      gQuery = typed + ($("gpixel").checked ? " pixel art" : ""); gOffset = 0; $("results").textContent = "";
+      var typed = $("gq").value.trim();
+      if (!typed) { gsay("Type something to search for, or tap a quick search.", true); return; }
+      gQuery = typed + (pixelOnly ? " pixel art" : ""); gOffset = 0; $("results").textContent = "";
     }
     gBusy = true; $("gmore").hidden = true; gsay("Searching...");
     try {
       var url = "https://api.giphy.com/v1/gifs/search?api_key=" + encodeURIComponent(key) + "&q=" + encodeURIComponent(gQuery) +
         "&limit=" + PAGE + "&offset=" + gOffset + "&rating=pg&lang=en";
       var r = await fetch(url);
-      if (!r.ok) {
-        throw new Error(r.status === 401 || r.status === 403 ? "GIPHY did not accept that key. Check it and save it again."
-          : r.status === 429 ? "GIPHY says too many searches this hour (free keys allow 100). Try again later."
-          : "GIPHY answered with error " + r.status + ".");
-      }
+      if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? "GIPHY did not accept that key. Check it in Settings."
+        : r.status === 429 ? "GIPHY says too many searches this hour (free keys allow 100). Try again later." : "GIPHY answered with error " + r.status + ".");
       var j = await r.json(), list = j.data || [];
       list.forEach(function (d) {
-        var im = d.images || {}, thumb = (im.fixed_width_small || im.fixed_width || im.original || {}).url,
-          full = (im.fixed_width || im.original || {}).url;
+        var im = d.images || {}, thumb = (im.fixed_width_small || im.fixed_width || im.original || {}).url, full = (im.fixed_width || im.original || {}).url;
         if (!thumb || !full) return;
-        var b = document.createElement("button");
-        b.type = "button"; b.setAttribute("aria-label", d.title || "GIF");
-        var img = document.createElement("img");
-        img.src = thumb; img.alt = d.title || ""; img.loading = "lazy";
-        b.appendChild(img);
-        b.addEventListener("click", function () { useOnline(full, d.title || "GIPHY GIF"); });
-        $("results").appendChild(b);
+        $("results").appendChild(h("button", { type: "button", "aria-label": d.title || "GIF", onclick: function () { useOnline(full, d.title || "GIF"); } },
+          [h("img", { src: thumb, alt: d.title || "", loading: "lazy" })]));
       });
       gOffset += list.length;
-      gsay(list.length ? "Tap a picture to prepare it." : (gOffset ? "No more results." : "Nothing found. Try another word, or untick Pixel art only."), list.length ? "" : "bad");
+      gsay(list.length ? "Tap a picture to send it." : (gOffset ? "No more results." : "Nothing found. Try another word, or turn off Pixel art only."), !list.length && !gOffset);
       $("gmore").hidden = list.length < PAGE;
     } catch (err) {
-      gsay(err && err.message && /GIPHY/.test(err.message) ? err.message : "Could not reach GIPHY. Check your connection and the key.", "bad");
+      gsay(err && err.message && /GIPHY/.test(err.message) ? err.message : "Could not reach GIPHY. Check your connection and key.", true);
     }
     gBusy = false;
   }
   async function useOnline(url, title) {
-    gsay("Downloading...");
+    S.prepared = null; openSend(S.target);
+    var mine = S.send; mine.r.meta.textContent = "Downloading...";
     try {
       var r = await fetch(url);
       if (!r.ok) throw new Error("download failed");
       var bytes = new Uint8Array(await r.arrayBuffer());
-      gsay("Got it. Preparing...", "good");
-      await prepareFromBytes(new Blob([bytes]), bytes, "GIPHY: " + title);
-      gsay("");
-      $("upsec").scrollIntoView({ behavior: "smooth", block: "start" });
+      if (S.send !== mine) return;
+      await fillSend(mine, new Blob([bytes]), bytes, "GIPHY: " + title);
     } catch (err) {
-      gsay("Could not download that GIF here. Try a different one.", "bad");
+      if (S.send === mine) { mine.r.title.textContent = "Could not download that GIF"; mine.r.meta.textContent = "Try a different one."; }
     }
   }
 
-  setConnected(false);
-  if (!navigator.bluetooth) say("This browser has no Bluetooth access. On iPhone, open this page in the Bluefy app.", "bad");
+  $("file").addEventListener("change", async function (e) {
+    var file = e.target.files && e.target.files[0], target = S.fileTarget;
+    e.target.value = ""; S.fileTarget = null;
+    if (!file) return;
+    if (file.size > 15 * 1024 * 1024) { toast("That file is over 15 MB. Please pick a smaller GIF.", "bad"); return; }
+    var bytes = new Uint8Array(await file.arrayBuffer());
+    startSend(file, bytes, file.name, target);
+  });
+
+  // ---------- Settings ----------
+  var ACCENTS = [["teal", "Teal", "#3fc1d1"], ["blue", "Blue", "#6aa6ff"], ["orange", "Orange", "#ffa04a"], ["red", "Red", "#ff6f6f"], ["purple", "Purple", "#b794ff"], ["green", "Green", "#55d68f"], ["pink", "Pink", "#ff80b8"]];
+  function renderSettings() {
+    Array.prototype.forEach.call($("themeSeg").children, function (b) { b.classList.toggle("on", b.dataset.v === settings.theme); });
+    Array.prototype.forEach.call($("swatches").children, function (b) { var on = b.dataset.v === settings.accent; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
+    var sw = $("slow"); sw.classList.toggle("on", settings.slow); sw.setAttribute("aria-checked", settings.slow ? "true" : "false");
+  }
+  ACCENTS.forEach(function (a) {
+    $("swatches").appendChild(h("button", { type: "button", class: "sw", "data-v": a[0], "aria-label": a[1], style: "--c:" + a[2],
+      onclick: function () { settings.accent = a[0]; lsSet("idot-accent", a[0]); applyTheme(); renderSettings(); } }));
+  });
+  Array.prototype.forEach.call($("themeSeg").children, function (b) {
+    b.addEventListener("click", function () { settings.theme = b.dataset.v; lsSet("idot-theme", b.dataset.v); applyTheme(); renderSettings(); });
+  });
+  $("slow").addEventListener("click", function () { settings.slow = !settings.slow; lsSet("idot-slow", settings.slow ? "1" : "0"); renderSettings(); });
+  $("gkey").value = savedKey();
+  $("gsave").addEventListener("click", function () {
+    var k = $("gkey").value.trim(); lsSet(GKEY, k); updateKeyNeed();
+    toast(k ? "Key saved on this device." : "Key removed.");
+  });
+  $("disc").addEventListener("click", disconnect);
+  var clearArmed = null;
+  $("clearPrev").addEventListener("click", async function () {
+    var b = $("clearPrev");
+    if (!clearArmed) { b.textContent = "Tap again to confirm"; clearArmed = setTimeout(function () { clearArmed = null; b.textContent = "Clear"; }, 3500); return; }
+    clearTimeout(clearArmed); clearArmed = null; b.textContent = "Clear";
+    try { await db.clear(); } catch (e) {}
+    Object.keys(S.urls).forEach(function (k) { dropUrl(k); });
+    S.library = {}; refreshAll(); toast("Saved previews cleared.");
+  });
+
+  // ---------- tabs ----------
+  Array.prototype.forEach.call($("tabs").children, function (b) { b.addEventListener("click", function () { showTab(b.dataset.tab); }); });
+
+  // ---------- start ----------
+  var m = /[#&]key=([^&]+)/.exec(location.hash);
+  if (m) {
+    lsSet(GKEY, decodeURIComponent(m[1]).trim()); $("gkey").value = savedKey();
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+    setTimeout(function () { toast("GIPHY key saved on this device."); }, 400);
+  }
+  applyTheme(); renderSettings(); refreshAll(); updateKeyNeed();
+  db.all().then(function (all) {
+    Object.keys(all).forEach(function (k) { var n = parseInt(k, 10); if (n >= 0 && n < 60) S.library[n] = all[k]; });
+    refreshAll();
+  }).catch(function () {});
+  if (!navigator.bluetooth) setTimeout(function () { toast("This browser has no Bluetooth. On iPhone, open this page in the Bluefy app.", "bad", 9000); }, 600);
 })();
+
 </script>
 </body>
 </html>
